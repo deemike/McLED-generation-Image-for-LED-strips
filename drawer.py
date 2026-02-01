@@ -281,20 +281,20 @@ class LedImageGenerator:
         
         cx = tsize // 2
         base_y = 45 * upscale # Линия платы
-        w = 80 * upscale      # Ширина профиля
+        w = 60 * upscale      # Ширина профиля
         h = 32 * upscale      # Высота профиля
         
-        if p_type == "ip20":
-            # IP20: Просто плата и чип сверху
-            td.line([cx-w//2, base_y, cx+w//2, base_y], fill="black", width=2*upscale)
-            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], fill="black")
+        if p_type == "ip20" or p_type == "ip54" or p_type == "ip67_digital":
+            # IP20, IP54, IP67(DIGI SPI): Просто плата и чип сверху
+            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", width=2*upscale)
+            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
             
         elif p_type == "ip20_cob":
-            # IP20 COB: Плата и сплошная дуга (люминофор)
-            td.line([cx-w//2, base_y, cx+w//2, base_y], fill="black", width=2*upscale)
-            td.chord([cx-32*upscale, base_y-18*upscale, cx+32*upscale, base_y+10*upscale], 180, 360, fill="#FFD700", outline="black", width=1*upscale)
-
-        elif p_type == "ip54":
+            # IP20 COB: Плата и чип дугообразный
+            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", width=2*upscale)
+            td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=2*upscale)
+        
+        elif p_type == "ip54_vlhke":
             # IP54 / Vlhke prostredi: Плата под куполом
             td.line([cx-w//2, base_y, cx+w//2, base_y], fill="black", width=2*upscale)
             td.arc([cx-w//2, base_y-30*upscale, cx+w//2, base_y+10*upscale], 180, 360, fill="black", width=2*upscale)
@@ -304,16 +304,12 @@ class LedImageGenerator:
             td.rectangle([cx-w//2, base_y-h, cx+w//2, base_y], outline="black", width=2*upscale)
             td.line([cx-25*upscale, base_y-h//2, cx+25*upscale, base_y-h//2], fill="black", width=2*upscale)
 
-        elif p_type == "ip67_digital":
-            # IP67 DIGITAL SPI: Прямоугольник с заливкой
-            td.rectangle([cx-w//2, base_y-h, cx+w//2, base_y], outline="black", width=2*upscale)
-            td.rectangle([cx-w//2+4, base_y-h+4, cx+w//2-4, base_y-4], fill="#D0D0D0")
-            td.line([cx-25*upscale, base_y-h//2, cx+25*upscale, base_y-h//2], fill="black", width=2*upscale)
-
         elif p_type == "ip68":
-            # IP68: Залитый прямоугольник
-            td.rectangle([cx-w//2, base_y-h, cx+w//2, base_y], fill="#B0B0B0", outline="black", width=2*upscale)
-            td.line([cx-25*upscale, base_y-h//2, cx+25*upscale, base_y-h//2], fill="black", width=3*upscale)
+            # IP68: В прямоугольнике со стенками находится плата и чип
+            td.rectangle([cx-34*upscale, base_y-18*upscale, cx+34*upscale, base_y+6*upscale], outline="black", width=2*upscale)
+            td.rectangle([cx-w//2, base_y-14*upscale, cx+w//2, base_y+3*upscale], outline="black", width=2*upscale)
+            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
 
         timg = timg.resize((self.size, self.size), Image.Resampling.LANCZOS)
         draw._image.paste(timg, (int(x), int(y)), timg)
@@ -458,7 +454,7 @@ class LedImageGenerator:
                 icon_to_draw = "ip67_digital"
             # Приоритет 2: Влажная среда (IP54)
             elif "vlhké prostředí" in all_text:
-                icon_to_draw = "ip54"
+                icon_to_draw = "ip54_vlhke"
             # Приоритет 3: Конкретные IP
             elif ip_val == "67":
                 icon_to_draw = "ip67"
@@ -473,10 +469,10 @@ class LedImageGenerator:
             
             # Рисуем текст (число и mm)
             w_v = draw.textbbox((0,0), val, font=self.f_val)[2]
-            draw.text((x + (self.size - w_v) / 2, y + 58), val, fill="black", font=self.f_val)
+            draw.text((x + (self.size - w_v) / 2, y + 50), val, fill="black", font=self.f_val)
             
             w_m = draw.textbbox((0,0), "mm", font=self.f_mid)[2]
-            draw.text((x + (self.size - w_m) / 2, y + 90), "mm", fill="black", font=self.f_mid)
+            draw.text((x + (self.size - w_m) / 2, y + 78), "mm", fill="black", font=self.f_mid)
         else:
             sub = config.SUB_TEXTS.get(field, "")
             w_v = draw.textbbox((0,0), val, font=self.f_val)[2]
