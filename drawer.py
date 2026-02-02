@@ -286,23 +286,25 @@ class LedImageGenerator:
         
         if p_type == "ip20" or p_type == "ip54" or p_type == "ip67_digital":
             # IP20, IP54, IP67(DIGI SPI): Просто плата и чип сверху
-            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", width=2*upscale)
+            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
             td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
             
         elif p_type == "ip20_cob":
             # IP20 COB: Плата и чип дугообразный
-            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", width=2*upscale)
+            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", width=2*upscale)
             td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=2*upscale)
         
-        elif p_type == "ip54_vlhke":
-            # IP54 / Vlhke prostredi: Плата под куполом
-            td.line([cx-w//2, base_y, cx+w//2, base_y], fill="black", width=2*upscale)
-            td.arc([cx-w//2, base_y-30*upscale, cx+w//2, base_y+10*upscale], 180, 360, fill="black", width=2*upscale)
+        # elif p_type == "ip54_vlhke":
+        #     # IP54 / Vlhke prostredi: Плата под куполом
+        #     td.line([cx-w//2, base_y, cx+w//2, base_y], fill="black", width=2*upscale)
+        #     td.arc([cx-w//2, base_y-30*upscale, cx+w//2, base_y+10*upscale], 180, 360, fill="black", width=2*upscale)
 
-        elif p_type == "ip67":
-            # IP67: Прямоугольный пустой корпус
-            td.rectangle([cx-w//2, base_y-h, cx+w//2, base_y], outline="black", width=2*upscale)
-            td.line([cx-25*upscale, base_y-h//2, cx+25*upscale, base_y-h//2], fill="black", width=2*upscale)
+        elif p_type == "ip67" or p_type == "ip54_vlhke":
+            # IP67: В полукруглом корпусе со стенками находится плата и чип
+            td.chord([cx-34*upscale, base_y-20*upscale, cx+34*upscale, base_y+28*upscale], 180, 360, outline="black", width=2*upscale)
+            td.chord([cx-30*upscale, base_y-16*upscale, cx+30*upscale, base_y+20*upscale], 180, 360, outline="black", width=2*upscale)
+            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
 
         elif p_type == "ip68":
             # IP68: В прямоугольнике со стенками находится плата и чип
@@ -395,7 +397,7 @@ class LedImageGenerator:
             if kelvin and "-" in kelvin:
                 k1, k2 = kelvin.split("-")
                 draw.text((x + 22, y + 50), f"{k1} -", fill="black", font=self.f_mid)
-                draw.text((x + 22, y + 75), f"{k2}K", fill="black", font=self.f_mid)
+                draw.text((x + 18, y + 75), f"{k2}K", fill="black", font=self.f_mid)
         elif field == "chip":
             val_up = val.upper().strip()
             if val_up == "COB":
@@ -445,16 +447,33 @@ class LedImageGenerator:
             ip_val = str(full_data.get("ip", "")).strip()
             chip_val = str(full_data.get("chip", "")).upper()
             color_val = str(full_data.get("color", "")).upper()
-            all_text = str(full_data).lower()
+            model_val = str(full_data.get("model", "")).upper().strip()
+            # all_text = str(full_data).lower()
             
+            if not model_val:
+                all_data_str = str(full_data)
+                m_search = re.search(r'(\d{2}B)', all_data_str)
+                if m_search:
+                    model_val = m_search.group(1)
+
+            target_models = ["79B", "80B", "81B", "82B", "83B", "84B"]
+
             icon_to_draw = "ip20" # По умолчанию
             
+
+            print(f"--- DEBUG INFO ---")
+            print(f"Full Data Keys: {list(full_data.keys())}") # Проверим, какие ключи вообще есть
+            print(f"MODEL_VAL: '{model_val}'")
+            print(f"------------------")
+
             # Приоритет 1: Digital SPI
             if "DIGITAL SPI" in color_val:
                 icon_to_draw = "ip67_digital"
-            # Приоритет 2: Влажная среда (IP54)
-            elif "vlhké prostředí" in all_text:
+            # УСЛОВИЕ: Если IP54 и модель входит в наш список
+            elif ip_val == "54" and model_val in target_models:
                 icon_to_draw = "ip54_vlhke"
+            elif ip_val == "54":
+                icon_to_draw = "ip54"
             # Приоритет 3: Конкретные IP
             elif ip_val == "67":
                 icon_to_draw = "ip67"
@@ -468,6 +487,15 @@ class LedImageGenerator:
             self._draw_width_profile(draw, x, y, icon_to_draw)
             
             # Рисуем текст (число и mm)
+            line_y = y + 15
+            draw.line([x + 26, line_y - 7, x + 26, line_y + 7], fill="black", width=1)
+            draw.line([x + self.size - 26, line_y - 7, x + self.size - 26, line_y + 7], fill="black", width=1)
+            arrow_y = 15
+            draw.line([x + 26, y + arrow_y, x + self.size - 26, y + arrow_y], fill="black", width=1)
+            draw.line([x + 26, y + arrow_y, x + 32, y + arrow_y - 3], fill="black", width=1)
+            draw.line([x + 26, y + arrow_y, x + 32, y + arrow_y + 3], fill="black", width=1)
+            draw.line([x + self.size - 26, y + arrow_y, x + self.size - 32, y + arrow_y - 3], fill="black", width=1)
+            draw.line([x + self.size - 26, y + arrow_y, x + self.size - 32, y + arrow_y + 3], fill="black", width=1)
             w_v = draw.textbbox((0,0), val, font=self.f_val)[2]
             draw.text((x + (self.size - w_v) / 2, y + 50), val, fill="black", font=self.f_val)
             
@@ -480,3 +508,5 @@ class LedImageGenerator:
             if sub:
                 w_s = draw.textbbox((0,0), sub, font=self.f_mid)[2]
                 draw.text((x + (self.size-w_s)/2, y + 65), sub, fill=txt_color, font=self.f_mid)
+    
+    

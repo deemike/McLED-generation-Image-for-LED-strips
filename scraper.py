@@ -16,7 +16,14 @@ def fetch_data(url):
     try:
         driver.get(url)
         time.sleep(3)
+        
         source = driver.find_element(By.TAG_NAME, "body").text
+
+        # --- ДОБАВЬТЕ ЭТО ДЛЯ ОТЛАДКИ ---
+        # with open("debug_source.txt", "w", encoding="utf-8") as f:
+        #     f.write(source)
+        # print("Текст страницы сохранен в файл debug_source.txt для проверки.")
+        # -------------------------------
     finally:
         driver.quit()
 
@@ -78,9 +85,9 @@ def fetch_data(url):
         "lumen": r'(\d+)\s?lm/m',
         "voltage": r'(\d+)\s?V\b',
         "ip": r'IP(\d+)',
-        "width": r'(\d+)\s?mm\b',
+        "width": r'Šířka\s?\[mm\][:\s]+(\d+)',
+        "model": r'Model\s*(\d{2,3}B)',
         "life": r'(\d+)\s?h\b',
-        # ДОБАВЛЕННЫЕ ПАРАМЕТРЫ:
         "cri": r'Index podání barev CRI[:\s]+(90-100|90)',
         "angle": r'Úhel vyzařování\s?\[°\][:\s]+(\d+)'
     }
@@ -95,5 +102,12 @@ def fetch_data(url):
             if key == "cri" and "90" in val:
                 val = "90"
             res[key] = val
+
+    if "model" not in res or not res["model"]:
+        check_model = re.search(r'Model\s*(\d{2,3}B)', source, re.IGNORECASE)
+        if check_model:
+            res["model"] = check_model.group(1).upper()
+        else:
+            res["model"] = "" # Создаем пустой ключ, чтобы не было ошибки None
 
     return res

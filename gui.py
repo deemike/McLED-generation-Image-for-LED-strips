@@ -13,7 +13,7 @@ class LedApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("McLED Visual Pro 45.5 - CRI and Angle Edition")
+        self.title("McLED Visual Pro 45.6")
         self.geometry("1000x750")
         
         ctk.set_appearance_mode(config.APPEARANCE_MODE)
@@ -51,7 +51,7 @@ class LedApp(ctk.CTk):
         self.entries = {}
         fields = [
             "color", "kelvin", "chip", "leds", "power", "lumen", "voltage", "ip", "width", 
-            "life", "cut", "led_segment", "max_single", "max_double", "cri", "angle"
+            "life", "cut", "led_segment", "max_single", "max_double", "cri", "angle", "model"
           ]
         
         for i, field in enumerate(fields):
