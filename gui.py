@@ -34,7 +34,7 @@ class LedApp(ctk.CTk):
         
         self.url_input = ctk.CTkEntry(self.frame_top, width=600)
         self.url_input.pack(side="left", padx=10)
-        self.url_input.insert(0, "https://www.mcled.cz/ml-129-001-90-x")
+        self.url_input.insert(0, "https://www.mcled.cz/ml-126-676-60-x")
 
         self.btn_parse = ctk.CTkButton(self.frame_top, text="СКАНИРОВАТЬ", command=self.run_fetch, fg_color="#E65100", hover_color="#BF360C")
         self.btn_parse.pack(side="left", padx=20)

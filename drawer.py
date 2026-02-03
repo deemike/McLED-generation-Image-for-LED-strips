@@ -123,7 +123,20 @@ class LedImageGenerator:
                 self._draw_field_content(draw, field, val, curr_x, curr_y, txt_color, data, v_text_circuit)
 
         extra_fields = []
+        # 1. Логика CRI
         if data.get("cri") == "90": extra_fields.append("cri")
+        
+        # 2. Логика AL-Profil (Мощность >= 28.8)
+        power_str = data.get("power", "0").replace(",", ".") # Меняем запятую на точку
+        try:
+            power_val = float(power_str)
+        except ValueError:
+            power_val = 0.0
+            
+        if power_val >= 28.8:
+            extra_fields.append("al_profile")
+
+        # 3. Логика Угла
         if data.get("angle"): extra_fields.append("angle")
 
         for idx, field in enumerate(extra_fields):
@@ -134,6 +147,9 @@ class LedImageGenerator:
                 self._draw_cri(draw, curr_x, curr_y)
             elif field == "angle":
                 self._draw_angle(draw, curr_x, curr_y, data.get("angle"))
+            # ДОБАВЛЯЕМ ЭТУ СТРОКУ:
+            elif field == "al_profile":
+                self._draw_al_profile(draw, curr_x, curr_y)
 
         return canvas
 
@@ -271,6 +287,179 @@ class LedImageGenerator:
 
         draw_side("right")
         if mode == "double": draw_side("left")
+
+    def _draw_al_profile(self, draw, x, y):
+        """Отрисовка иконки AL-Profil (4 ребра, сглаженные углы)"""
+        # Фон кнопки
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE")
+        
+        # Текст
+        txt = "AL-Profil"
+        font = self.f_val
+        if draw.textbbox((0,0), txt, font=font)[2] > self.size - 10:
+             font = self.f_mid
+        tw = draw.textbbox((0,0), txt, font=font)[2]
+        draw.text((x + (self.size - tw) / 2, y + 10), txt, fill="black", font=font)
+
+        # --- РИСУЕМ ПРОФИЛЬ (High Resolution) ---
+        # Увеличиваем разрешение в 8 раз для идеального скругления линий
+        upscale = 8
+        ts = self.size * upscale
+        timg = Image.new('RGBA', (ts, ts), (0, 0, 0, 0))
+        td = ImageDraw.Draw(timg)
+        
+        cx = ts // 2
+        cy = ts // 2 + 6 * upscale
+        
+        # --- ГЕОМЕТРИЯ ПРОФИЛЯ ---
+        # Размеры
+        w_inner = 70 * upscale      # Ширина внутреннего канала
+        h_wall = 31 * upscale       # Высота вертикальной стенки
+        base_y = cy + 10 * upscale  # Нижняя точка профиля
+        top_y = base_y - h_wall     # Верхняя точка
+        wall_thick = 4 * upscale # Толщина металла (визуальная)
+        fin_len = 8 * upscale      # Вылет ребра вбок
+        fin_h = 4 * upscale         # Толщина кончика ребра
+        # Расстояние между ребрами по вертикали (шаг)
+        # У нас 3 ребра на стене + 1 нижнее (основание)
+        # Делим высоту стены на секции
+        
+        rib_step = 9 * upscale      # Шаг между началами ребер
+        
+        # Толщина линии контура (она же задает радиус скругления)
+        line_w = 1 * upscale 
+
+        # Координаты для построения контура одной линией
+        points = []
+
+        # 1. Левая сторона (Ребра)
+        # Начинаем с верхнего левого ребра (кончик)
+        # Идем сверху вниз 
+        # x координаты стены и кончиков ребер
+        x_wall_left = cx - w_inner // 2 - line_w // 2 - wall_thick
+        x_fin_left = x_wall_left - fin_len
+        
+        # Рисуем 3 верхних ребра слева
+        for i in range(3):
+            ry = top_y + (i * rib_step)
+            # Кончик ребра
+            points.append((x_fin_left, ry))
+            points.append((x_fin_left, ry + fin_h))
+            # Впадина у стены
+            points.append((x_wall_left, ry + fin_h))
+            points.append((x_wall_left, ry + rib_step)) # Вниз до следующего
+            
+        # 2. Четвертое ребро слева (Нижнее, выходит из основания)
+        # Оно находится на уровне base_y
+        points.append((x_fin_left, base_y - fin_h)) # Выступ влево
+        points.append((x_fin_left, base_y + fin_h))
+        points.append((x_wall_left, base_y + wall_thick)) # Возврат к стене
+
+        # 3. Дно (плоское)
+        # Идем вправо до правой стены
+        x_wall_right = cx + w_inner // 2 + line_w // 2 + wall_thick
+        points.append((x_wall_right, base_y + wall_thick))
+
+        # 4. Правая сторона (Ребра снизу вверх)
+        x_fin_right = x_wall_right + fin_len
+        
+        # Нижнее (четвертое) ребро справа
+        points.append((x_fin_right, base_y + fin_h))
+        points.append((x_fin_right, base_y - fin_h))
+        points.append((x_wall_right, base_y - wall_thick)) # К стене
+        
+        # Остальные 3 ребра справа (снизу вверх)
+        # Логика обратная левой стороне
+        for i in range(2, -1, -1):
+            ry = top_y + (i * rib_step)
+            # Поднимаемся по стене до низа ребра
+            points.append((x_wall_right, ry + fin_h + (rib_step - fin_h))) # Точка во впадине
+            points.append((x_wall_right, ry + fin_h)) # Точка начала ребра у стены
+            # Кончик ребра
+            points.append((x_fin_right, ry + fin_h))
+            points.append((x_fin_right, ry))
+            
+        # Заканчиваем на верхней точке правой стены (внутренний угол)
+        points.append((x_wall_right, top_y))
+
+        # 5. Внутренняя часть (П-образная чаша)
+        # Мы сейчас на верху внешней правой стены. Ныряем внутрь.
+        points.append((cx + w_inner // 2, top_y)) # Внутренний правый верх
+        points.append((cx + w_inner // 2, base_y - line_w)) # Внутренний правый низ
+        points.append((cx - w_inner // 2, base_y - line_w)) # Внутренний левый низ
+        points.append((cx - w_inner // 2, top_y)) # Внутренний левый верх
+        
+        # Замыкаем контур (соединяем с началом левого верхнего ребра)
+        points.append((x_wall_left, top_y))
+        points.append((x_fin_left, top_y)) # Замыкаем в точку старта
+
+        # --- ОТРИСОВКА КОНТУРА ---
+        # joint="curve" делает все углы скругленными
+        td.line(points, fill="black", width=line_w, joint="curve")
+
+        # --- ЧИП ВНУТРИ ---
+        td.rectangle([cx-32*upscale, base_y-9*upscale, cx+32*upscale, base_y-3*upscale], outline="black", fill="#989898", width=1*upscale)
+        # Чип (квадратик)
+        td.rectangle([cx-8*upscale, base_y-18*upscale, cx+8*upscale, base_y-8*upscale], outline="black", width=1*upscale)
+
+
+        # --- ВОЛНИСТЫЕ СТРЕЛКИ (Снизу) ---
+        arrow_y_start = base_y + 8 * upscale
+        
+        # --- ВОЛНИСТЫЕ СТРЕЛКИ (Снизу) ---
+        arrow_y_start = base_y + 8 * upscale
+        
+        def draw_wavy_arrow(ax, ay, angle_deg=0):
+            import math
+            # 1. Параметры изгиба S-линии
+            # ax, ay — это точка начала (верх хвоста стрелки)
+            arc_size = 10 * upscale
+            line_w = 1 * upscale
+            
+            # Рисуем S-образную линию
+            # Верхняя дуга
+            td.arc([ax, ay - 52, ax + arc_size, ay + 88], 330, 66, fill="black", width=line_w)
+            # Нижняя дуга (зеркальная)
+            td.arc([ax + 4, ay + arc_size, ax + 98, ay + 3 * arc_size], 120, -87, fill="black", width=line_w)
+            
+            # 2. Координаты кончика стрелки (где будет треугольник)
+            # В нашей геометрии это нижняя точка второй дуги
+            tip_x = ax - arc_size + 72
+            tip_y = ay + 3 * arc_size - 38
+            
+            # 3. Настройка треугольника (наконечника)
+            angle_rad = math.radians(angle_deg)
+            tsize = 5 * upscale  # Размер наконечника
+            
+            # Базовые точки треугольника относительно (0,0) - острие вниз
+            # (0,0) - это само острие
+            base_poly = [
+                (0, 0), 
+                (-tsize // 1.5, -tsize), 
+                (tsize // 1.5, -tsize)
+            ]
+            
+            # Вращаем точки наконечника
+            rotated_poly = []
+            for px, py in base_poly:
+                # Матрица поворота
+                rx = px * math.cos(angle_rad) - py * math.sin(angle_rad)
+                ry = px * math.sin(angle_rad) + py * math.cos(angle_rad)
+                # Смещаем к точке tip_x, tip_y
+                rotated_poly.append((rx + tip_x, ry + tip_y))
+            
+            td.polygon(rotated_poly, fill="black")
+
+        # --- ВЫЗОВ СТРЕЛОК С РУЧНЫМ УГЛОМ ---
+        # Теперь ты можешь менять angle_deg для каждой стрелки индивидуально
+        # 0 - смотрит прямо вниз, минус - влево, плюс - вправо
+        draw_wavy_arrow(cx - 20*upscale, arrow_y_start, angle_deg=100) # Левая
+        draw_wavy_arrow(cx - 5*upscale,  arrow_y_start, angle_deg=100)   # Центральная
+        draw_wavy_arrow(cx + 10*upscale, arrow_y_start, angle_deg=100)  # Правая
+
+        # Ресайз и вставка
+        timg = timg.resize((self.size, self.size), Image.Resampling.LANCZOS)
+        draw._image.paste(timg, (int(x), int(y)), timg)
 
     def _draw_width_profile(self, draw, x, y, p_type):
         """ Рисует технические разрезы оболочек лент """
@@ -460,11 +649,10 @@ class LedImageGenerator:
 
             icon_to_draw = "ip20" # По умолчанию
             
-
-            print(f"--- DEBUG INFO ---")
-            print(f"Full Data Keys: {list(full_data.keys())}") # Проверим, какие ключи вообще есть
-            print(f"MODEL_VAL: '{model_val}'")
-            print(f"------------------")
+            # print(f"--- DEBUG INFO ---")
+            # print(f"Full Data Keys: {list(full_data.keys())}") # Проверим, какие ключи вообще есть
+            # print(f"MODEL_VAL: '{model_val}'")
+            # print(f"------------------")
 
             # Приоритет 1: Digital SPI
             if "DIGITAL SPI" in color_val:
