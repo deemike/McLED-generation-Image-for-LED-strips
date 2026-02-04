@@ -4,8 +4,8 @@ COLOR_THEME = "blue"
 
 # --- ЦВЕТА (Основные фоны) ---
 COLOR_MAP_LIGHT = {
-    "UWW": "#FCE166", "EWW": "#FAF39D", "WW": "#FFFBDB", "NW": "#FFFFFF", "CW": "#EAF6FE",
-    "R": "#FF5252", "G": "#66BB6A", "B": "#42A5F5", "Y": "#FFF176", 
+    "UWW": "#FCE166", "EWW": "#FAF39D", "WW": "#FFFBDB", "NW": "#F6F6F6", "CW": "#EAF6FE",
+    "R": "#DF1C1A", "G": "#39AB54", "B": "#009EDB", "Y": "#ECD150", 
     "UV": "#38075B", "UVA": "#6A0DAD", "DW": "#DFEAEF",
     "DIGITAL SPI": "#333333" # Темный фон для Digital
 }

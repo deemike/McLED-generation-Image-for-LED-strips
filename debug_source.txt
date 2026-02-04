@@ -3,51 +3,145 @@ O nás
 Ke stažení
 Kontakt
 Doprodej
-LED pásek SOB EWW, 320LED/m, 10W/m, DC 24V, 990lm/m, CRI90, IP54, modul 25mm, 8mm, 5m
+LED pásek SMD2835 R, 120LED/m, 9,6W/m, DC 24V, 240lm/m, IP20, 8mm, 5m
+LED pásek SMD2835, červený R, 9,6W, 120LED, 240lm/m, CRI>90, segment 50mm, 6LED/segment, IP20, DC 24V, životnost 54000h, šíře 8mm, bílý PCB pásek, max. délka pásku při jednostranném zapojení: 5m, opatřen samolepící páskou 3M, UV stabilní. Balení 5m.
 Barva pásku
-Model 79B
+Model 41A
 Napájení pásku
+12V
 24V
 Zvolte délku pásku
 5m
 50m
 Na míru
 Na poptávku
-Kód: ML-126.146.90.0
-Záruka 2 roky
+Kód: ML-126.834.60.0
+Záruka 5 let
 Do košíku
 Podpora
 Hlídat
-Informační list výrobku Produktový list Tisk
-PŘÍSLUŠENSTVÍ
-Silikonové lepidlo pro utěsnění pásků IP67, 10ml, 1ks
-ML-110.037.90.0
-54,81 Kč/ks
-45,30 Kč bez DPH
+Produktový list Tisk
+NAPÁJECÍ ZDROJE
+LED napájecí adaptér 12W, DC24V/0,5A, IP20, plastový
+ML-732.062.11.1
+204,25 Kč/ks
+168,80 Kč bez DPH
 Skladem
 Do košíku
 -
 +
-Plastový úchyt pro pásky Dot-free IP67 šíře 8mm, 1ks
-ML-110.046.90.2
-5,32 Kč/ks
-4,40 Kč bez DPH
+LED napájecí adaptér 120W, DC24V/5A, IP20, plastový
+ML-732.069.11.1
+1 593,57 Kč/ks
+1 317,00 Kč bez DPH
 Skladem
 Do košíku
 -
 +
-Silikonová koncovka - přívod napájení pro Dot-free IP67 šíře 8x4mm, 1ks
-ML-110.046.90.1
-5,32 Kč/ks
-4,40 Kč bez DPH
+LED napájecí adaptér 24W, DC24V/1A, IP20, plastový
+ML-732.063.11.1
+385,99 Kč/ks
+319,00 Kč bez DPH
 Skladem
 Do košíku
 -
 +
-Silikonová koncovka - zakončení pro Dot-free IP67 8x4mm, 1ks
-ML-110.046.90.0
-5,32 Kč/ks
-4,40 Kč bez DPH
+LED napájecí adaptér 36W, DC24V/1,5A, IP20, plastový
+ML-732.064.11.1
+517,88 Kč/ks
+428,00 Kč bez DPH
+Očekáváme
+Do košíku
+-
++
+LED napájecí adaptér 48W, DC24V/2A, IP20, plastový
+ML-732.065.11.1
+642,63 Kč/ks
+531,10 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Více
+SADA PŘÍSLUŠENSTVÍ J
+Flexibilní spojka LED pásků 8mm, 2 piny, 120LED 3528/m
+ML-112.002.21.3
+25,41 Kč/ks
+21,00 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Power konektor LED pásků 8mm, 2 piny, 120LED/m
+ML-112.006.21.3
+26,26 Kč/ks
+21,70 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Připojovací konektor jednobarevných LED pásků 8mm, 120LED/m, 2m
+ML-112.004.78.3
+81,07 Kč/ks
+67,00 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Připojovací konektor LED pásků 8mm, 2 piny, 120LED 3528/m, 2m
+ML-112.004.21.3
+38,96 Kč/ks
+32,20 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Připojovací konektor LED pásků 8mm, 2 piny, 120LED 3528/m
+ML-112.003.21.3
+17,18 Kč/ks
+14,20 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Více
+SADA PŘÍSLUŠENSTVÍ Q
+Flexi spojka jednobarevných LED pásků šíře 8mm
+ML-112.002.78.8
+91,60 Kč/ks
+75,70 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Připojovací konektor jednobarevných LED pásků 8 mm
+ML-112.005.78.8
+25,41 Kč/ks
+21,00 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Quick Connector mezi vodičem 20 AWG a LED páskem šíře 10 mm
+ML-112.001.62.2
+19,84 Kč/ks
+16,40 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Quick Connector mezi vodičem 20 AWG a LED páskem šíře 8 mm
+ML-112.001.62.1
+19,84 Kč/ks
+16,40 Kč bez DPH
+Skladem
+Do košíku
+-
++
+Připojovací konektor jednobarevných LED pásků 8 mm, 150 mm
+ML-112.003.78.8
+39,69 Kč/ks
+32,80 Kč bez DPH
 Skladem
 Do košíku
 -
@@ -59,76 +153,75 @@ Video
 Provedení: Páska
 Způsob montáže: Povrchová montáž
 Typ světelného zdroje: LED nevyměnitelný
-Počet LED na metr [-]: 320
-Výkon na metr [W]: 10
-Světelný tok na metr [lm]: 990
+Počet LED na metr [-]: 120
+Výkon na metr [W]: 9,6
+Světelný tok na metr [lm]: 240
 Druh napětí: DC
 Napětí světel. zdroje [V]: 24 - 24
 Úhel vyzařování [°]: 120
 Provozní jednotka: LED driver napěťový
 Třída energetické účinnosti vestavěného světelného zdroje: A++, A+, A (LED)
-Jmenovitá životnost L70/B50 při 25 °C [h]: 50000
-Stupeň krytí (IP): IP54
-Max. celkový příkon [W]: 10
-Převládající barva světla: Bílá
-Barevná teplota [K]: 2600 - 2800
-Index podání barev CRI: 90-100 (třída 1A)
+Jmenovitá životnost L70/B10 při 25 °C [h]: 54000
+Stupeň krytí (IP): IP20
+Max. celkový příkon [W]: 9,6
+Převládající barva světla: Červená
 Šířka [mm]: 8
-Výška / hloubka [mm]: 4
-Délka segmentů [mm]: 25
+Výška / hloubka [mm]: 1,4
+Délka segmentů [mm]: 50
 S koncovým dílem: Ne
 Se sadou k připojení: Ne
 S ochranným krytem: Ne
 Samolepící: Ano
 Způsob kabeláže: Zakončeno
 Počet pólů: 2
+Průřez vodiče [mm2]: 0,82
 Způsob připojení: Kabel
 Směr vyzařování: kolmo
-Typ čipu: SMD 2216
+Typ čipu: SMD 2835
 Barva základny: bílá
 Barevná uniformita (MacAdamova elipsa): SDCM3
 Napětí světelného zdroje: 24
-Max. délka pásku při jednostranném napájení [m]: 5
-Max. délka pásku při oboustranném napájení [m]: 10
+Max. délka pásku při jednostranném napájení [m]: 7
+Max. délka pásku při oboustranném napájení [m]: 14
 Pásek s délkou na míru: Ano
-Umístění: vlhké prostředí
-Nutno umístit na hliníkový profil: Ano
-Barva světla: extra teple bílý EWW
+Umístění: suché prostředí
+Nutno umístit na hliníkový profil: Ne
+Barva světla: červený R
 Svítivost: střední - dekorativní
-Dělitelnost pásku po [mm]: 25 mm
+Dělitelnost pásku po [mm]: 50 mm
 Počet připojovacích vodičů: 2
-Počet LED na segment: 8
+Počet LED na segment: 6
 Záruka McLED [M]: 60
-EAN: 8595607165341
-Značka LED čipu: San'an
+EAN: 8594059195517
 PODOBNÉ PRODUKTY
-LED pásek SOB WW, 320LED/m, 10W/m,DC24V,IP54
-ML-126.077.90.X
-248,29 Kč/m
-205,20 Kč bez DPH
-Skladem
-Do košíku
-LED pásek SOB NW, 320LED/m, 10W/m,DC24V,IP54
-ML-126.078.90.X
-248,29 Kč/m
-205,20 Kč bez DPH
-Skladem
-Do košíku
-ML-126.096.90.X
-268,62 Kč/m
-222,00 Kč bez DPH
+LED pásek R, 120LED 720lm/m 28,8W/m, 24V, IP20
+ML-126.666.60.X
+502,39 Kč/m
+415,20 Kč bez DPH
 Očekáváme
 Do košíku
-LED pásek SOB WW, 320LED/m, 10W/m,DC24V,IP54
-ML-126.077.90.X
-248,29 Kč/m
-205,20 Kč bez DPH
+LED pásek červený, 60LED 14,4W/12V 360lm/m IP20
+ML-121.595.60.X
+274,43 Kč/m
+226,80 Kč bez DPH
 Skladem
 Do košíku
-LED pásek SOB NW, 320LED/m, 10W/m,DC24V,IP54
-ML-126.078.90.X
-248,29 Kč/m
-205,20 Kč bez DPH
+LED pásek červený, 60LED 14,4W/12V 250lm/m IP68
+ML-121.609.60.X
+375,95 Kč/m
+310,70 Kč bez DPH
+Skladem
+Do košíku
+LED pásek R, 60LED, 14,4W/24V, IP20, 5m
+ML-126.595.60.X
+274,43 Kč/m
+226,80 Kč bez DPH
+Skladem
+Do košíku
+LED pásek R, 120LED 720lm/m 28,8W/m, 24V, IP54
+ML-126.676.60.X
+543,77 Kč/m
+449,40 Kč bez DPH
 Skladem
 Do košíku
 Hodnocení obchodu

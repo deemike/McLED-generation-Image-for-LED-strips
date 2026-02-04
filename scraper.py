@@ -59,10 +59,26 @@ def fetch_data(url):
     # 6. DW (Daylight White)
     elif re.search(r'Barva světla[:\s]+denní bílý DW', source, re.IGNORECASE):
         res["color"] = "DW"
+    elif re.search(r'Barva světla[:\s]+studeně bílý CW', source, re.IGNORECASE):
+        res["color"] = "CW"
+    elif re.search(r'Barva světla[:\s]+neutrálně bílý NW', source, re.IGNORECASE):
+        res["color"] = "NW"
+    elif re.search(r'Barva světla[:\s]+teple bílý WW', source, re.IGNORECASE):
+        res["color"] = "WW"
 
     # 7. UVA
     elif re.search(r'Barva světla[:\s]+UVA', source, re.IGNORECASE):
         res["color"] = "UVA"
+    
+    # 8. Jednobarevné (R, G, B, Y)
+    elif re.search(r'Modrá|modrý B', source, re.IGNORECASE):
+        res["color"] = "B"
+    elif re.search(r'Červená|červený R', source, re.IGNORECASE):
+        res["color"] = "R"
+    elif re.search(r'Zelená|zelený G', source, re.IGNORECASE):
+        res["color"] = "G"
+    elif re.search(r'Žlutá|žlutý Y', source, re.IGNORECASE):
+        res["color"] = "Y"
 
     # 8. Стандартные (EWW, WW, NW, CW, etc.) - если не найдено выше
     else:

@@ -482,11 +482,6 @@ class LedImageGenerator:
             # IP20 COB: Плата и чип дугообразный
             td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", width=2*upscale)
             td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=2*upscale)
-        
-        # elif p_type == "ip54_vlhke":
-        #     # IP54 / Vlhke prostredi: Плата под куполом
-        #     td.line([cx-w//2, base_y, cx+w//2, base_y], fill="black", width=2*upscale)
-        #     td.arc([cx-w//2, base_y-30*upscale, cx+w//2, base_y+10*upscale], 180, 360, fill="black", width=2*upscale)
 
         elif p_type == "ip67" or p_type == "ip54_vlhke":
             # IP67: В полукруглом корпусе со стенками находится плата и чип
@@ -582,11 +577,41 @@ class LedImageGenerator:
     def _draw_field_content(self, draw, field, val, x, y, txt_color, full_data, v_text):
         if field == "color":
             kelvin = full_data.get("kelvin", "").strip()
-            draw.text((x + 20, y + 15), val, fill="black", font=self.f_val)
-            if kelvin and "-" in kelvin:
-                k1, k2 = kelvin.split("-")
-                draw.text((x + 22, y + 50), f"{k1} -", fill="black", font=self.f_mid)
-                draw.text((x + 18, y + 75), f"{k2}K", fill="black", font=self.f_mid)
+            # Список цветов, которые мы хотим видеть крупно в центре, если нет Кельвинов
+            special_colors = ["R", "G", "B", "Y", "UV", "UVA", "V", "A"]
+            
+            if val in special_colors and not kelvin:
+                # --- ВАРИАНТ: КРУПНО В ЦЕНТРЕ ---
+                font = self.f_rgb_big
+                bbox = draw.textbbox((0, 0), val, font=font)
+                w_c = bbox[2] - bbox[0]
+                h_c = bbox[3] - bbox[1]
+                # Центрируем (с учетом размера квадрата 120x120)
+                draw.text((x + (self.size - w_c) / 2, y + (self.size - h_c) / 2 - 5), 
+                          val, fill="white", font=font)
+            else:
+                # --- ВАРИАНТ: БУКВА СВЕРХУ + КЕЛЬВИНЫ СНИЗУ ---
+                # Сама буква (val)
+                font_top = self.f_val
+                bbox_t = draw.textbbox((0, 0), val, font=font_top)
+                w_t = bbox_t[2] - bbox_t[0]
+                draw.text((x + (self.size - w_t) / 2, y + 15), val, fill="black", font=font_top)
+                
+                # Если есть кельвины (например "3000-3500")
+                if kelvin and "-" in kelvin:
+                    k1, k2 = kelvin.split("-")
+                    # Первая строка (3000 -)
+                    txt1 = f"{k1} -"
+                    w1 = draw.textbbox((0,0), txt1, font=self.f_mid)[2]
+                    draw.text((x + (self.size - w1) / 2, y + 50), txt1, fill="black", font=self.f_mid)
+                    # Вторая строка (3500K)
+                    txt2 = f"{k2}K"
+                    w2 = draw.textbbox((0,0), txt2, font=self.f_mid)[2]
+                    draw.text((x + (self.size - w2) / 2, y + 75), txt2, fill="black", font=self.f_mid)
+                elif kelvin:
+                    # Если кельвин просто одним числом
+                    w_k = draw.textbbox((0,0), kelvin, font=self.f_mid)[2]
+                    draw.text((x + (self.size - w_k) / 2, y + 60), kelvin, fill="black", font=self.f_mid)
         elif field == "chip":
             val_up = val.upper().strip()
             if val_up == "COB":
