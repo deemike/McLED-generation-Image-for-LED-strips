@@ -51,7 +51,7 @@ class LedApp(ctk.CTk):
         self.entries = {}
         fields = [
             "color", "kelvin", "chip", "leds", "power", "lumen", "voltage", "ip", "width", 
-            "life", "cut", "led_segment", "max_single", "max_double", "cri", "angle", "model"
+            "life", "life_l", "life_b", "cut", "led_segment", "max_single", "max_double", "cri", "angle", "model"
           ]
         
         for i, field in enumerate(fields):

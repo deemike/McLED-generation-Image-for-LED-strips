@@ -103,13 +103,13 @@ def fetch_data(url):
         "ip": r'IP(\d+)',
         "width": r'Šířka\s?\[mm\][:\s]+(\d+)',
         "model": r'Model\s*(\d{2,3}B)',
-        "life": r'(\d+)\s?h\b',
+        "life_full": r'L(\d+)/B(\d+).*?\[h\]:\s*(\d+[\s.]\d+|\d+)',
         "cri": r'Index podání barev CRI[:\s]+(90-100|90)',
         "angle": r'Úhel vyzařování\s?\[°\][:\s]+(\d+)'
     }
 
     for key, pattern in patterns.items():
-        match = re.search(pattern, source, re.IGNORECASE)
+        match = re.search(pattern, source, re.IGNORECASE | re.DOTALL)
         if match:
             val = match.group(1)
             if key == "chip": val = val.upper()
@@ -118,6 +118,16 @@ def fetch_data(url):
             if key == "cri" and "90" in val:
                 val = "90"
             res[key] = val
+            if key == "life_full":
+                res["life_l"] = match.group(1)
+                res["life_b"] = match.group(2)
+                res["life"] = match.group(3).replace(" ", "").replace(".", "")
+            else:
+                val = match.group(1)
+                if key == "chip": val = val.upper()
+                if key == "cut": val = val.replace('.', ',')
+                if key == "cri" and "90" in val: val = "90"
+                res[key] = val
 
     if "model" not in res or not res["model"]:
         check_model = re.search(r'Model\s*(\d{2,3}B)', source, re.IGNORECASE)

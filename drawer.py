@@ -103,7 +103,7 @@ class LedImageGenerator:
                         continue
 
                 if field == "life":
-                    self._draw_life(canvas, draw, curr_x, curr_y, val, bg_color)
+                    self._draw_life(canvas, draw, curr_x, curr_y, val, bg_color, data)
                     continue
 
                 if field == "color":
@@ -548,31 +548,56 @@ class LedImageGenerator:
         main_draw.text((x + (self.size-w2)/2, y + h_half + 10), bot_c, fill="black", font=self.f_dual_bot)
         main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, outline="#CCCCCC", width=1)
 
-    def _draw_life(self, canvas, main_draw, x, y, val, bg_color):
+    def _draw_life(self, canvas, main_draw, x, y, val, bg_color, data):
         main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color)
+        
+        # --- СУПЕРСЭМПЛИНГ ДЛЯ ЧАСОВ ---
         oversample = 4
         temp_size = self.size * oversample
         temp_img = Image.new('RGBA', (temp_size, temp_size), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
+        
+        # Рисуем круг часов
         circle_margin = 5 * oversample
-        temp_draw.ellipse([circle_margin, circle_margin, temp_size - circle_margin, temp_size - circle_margin], outline="black", width=2 * oversample)
-        l_x = 65 * oversample; l_y_top = 60 * oversample; l_y_bot = 105 * oversample
+        temp_draw.ellipse([circle_margin, circle_margin, temp_size - circle_margin, temp_size - circle_margin], 
+                          outline="black", width=2 * oversample)
+        
+        # Рисуем стрелки часов (Г-образные)
+        l_x = 65 * oversample
+        l_y_top = 60 * oversample
+        l_y_bot = 105 * oversample
         temp_draw.line([l_x, l_y_top, l_x + 40 * oversample, l_y_top], fill="black", width=2 * oversample)
         temp_draw.line([l_x, l_y_top, l_x, l_y_bot], fill="black", width=2 * oversample)
+        
         temp_img = temp_img.resize((self.size, self.size), Image.Resampling.LANCZOS)
         canvas.paste(temp_img, (int(x), int(y)), temp_img)
+
+        # --- ТЕКСТ (ЧАСЫ) ---
         full_val = val.replace(" ", "")
-        main_part = full_val[:-3] if len(full_val) > 3 else full_val
-        small_part = full_val[-3:] if len(full_val) > 3 else ""
+        main_part = full_val[:-3] if len(full_val) > 3 else full_val # Например "50"
+        small_part = full_val[-3:] if len(full_val) > 3 else ""     # Например "000"
+        
         w_main = main_draw.textbbox((0, 0), main_part, font=self.f_val)[2]
         main_draw.text((x + 25, y + 18), main_part, fill="black", font=self.f_val)
+        
         if small_part: 
             main_draw.text((x + 25 + w_main + 2, y + 24), small_part, fill="black", font=self.f_mid)
+        
         try: f_h = ImageFont.truetype(config.FONT_REGULAR, 45)
         except: f_h = ImageFont.load_default()
+        
         main_draw.text((x + 35, y + 53), "h", fill="black", font=f_h)
-        main_draw.text((x + 70, y + 63), "L70", fill="black", font=self.f_sub)
-        main_draw.text((x + 70, y + 80), "B50", fill="black", font=self.f_sub)
+
+        # --- ДИНАМИЧЕСКИЕ ПАРАМЕТРЫ L и B ---
+        # Получаем значения из данных или ставим стандартные
+        l_num = data.get("life_l", "70")
+        b_num = data.get("life_b", "50")
+        
+        l_text = f"L{l_num}"
+        b_text = f"B{b_num}"
+        
+        main_draw.text((x + 70, y + 63), l_text, fill="black", font=self.f_sub)
+        main_draw.text((x + 70, y + 80), b_text, fill="black", font=self.f_sub)
 
     def _draw_field_content(self, draw, field, val, x, y, txt_color, full_data, v_text):
         if field == "color":
