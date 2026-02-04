@@ -158,10 +158,10 @@ class LedApp(ctk.CTk):
                 if k in self.entries: self.entries[k].insert(0, v)
             
             self.btn_parse.configure(text="СКАНИРОВАТЬ САЙТ", state="normal")
-            messagebox.showinfo("Успех", "Данные успешно загружены")
+            self.show_status("Успех", "Данные успешно загружены")
         except Exception as e: 
             self.btn_parse.configure(text="СКАНИРОВАТЬ САЙТ", state="normal")
-            messagebox.showerror("Ошибка", str(e))
+            self.show_status("Ошибка", str(e))
 
     def draw_circuit(self, draw, x, y, size, mode, voltage_text):
         rect_x1, rect_y1 = x + 20, y + 50
@@ -371,7 +371,7 @@ class LedApp(ctk.CTk):
         filename = f"{self.url_input.get().split('/')[-1].upper().replace('-', '.')}_30.jpg"
         canvas.save(filename, "JPEG", quality=95)
         os.startfile(filename) if os.name == 'nt' else canvas.show()
-        messagebox.showinfo("Готово", f"Файл сохранен:\n{filename}")
+        self.show_status("Готово", f"Файл сохранен:\n{filename}")
 
 if __name__ == "__main__":
     app = LedApp()

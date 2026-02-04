@@ -117,9 +117,9 @@ class LedApp:
 
                     self.combos[key].set(clean_val)
             
-            messagebox.showinfo("OK", "Данные обновлены!")
+            self.show_status("OK", "Данные обновлены!")
         except Exception as e:
-            messagebox.showerror("Error", f"Ошибка: {e}")
+            self.show_status("Error", f"Ошибка: {e}")
 
     def build_image(self):
         canvas = Image.new('RGB', (1000, 1000), 'white')
