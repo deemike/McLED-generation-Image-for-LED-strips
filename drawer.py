@@ -5,7 +5,7 @@ import re
 import math
 
 class LedImageGenerator:
-    def __init__(self, width=1000, height=320):
+    def __init__(self, width=1000, height=600):
         self.width = width
         self.height = height
         self.size = 120
@@ -150,6 +150,9 @@ class LedImageGenerator:
             # ДОБАВЛЯЕМ ЭТУ СТРОКУ:
             elif field == "al_profile":
                 self._draw_al_profile(draw, curr_x, curr_y)
+
+        # Отрисовка увеличенной схемы внизу справа
+        self._draw_large_scheme(draw, data)
 
         return canvas
 
@@ -499,6 +502,95 @@ class LedImageGenerator:
 
         timg = timg.resize((self.size, self.size), Image.Resampling.LANCZOS)
         draw._image.paste(timg, (int(x), int(y)), timg)
+
+    def _draw_large_scheme(self, draw, data):
+        """Полная копия логики _draw_width_profile с увеличением"""
+        upscale = 2.8  # Коэффициент увеличения
+        cx = 780       # Позиция центра по горизонтали
+        base_y = 440   # Базовая линия (Y)
+        
+        # --- ТВОЯ ЛОГИКА ОПРЕДЕЛЕНИЯ ТИПА (P_TYPE) ---
+        ip_str = str(data.get("ip", "20")).upper()
+        chip_type = str(data.get("chip", "")).upper()
+        color_type = str(data.get("color", "")).upper()
+        
+        p_type = "ip20"
+        if "68" in ip_str: p_type = "ip68"
+        elif "67" in ip_str:
+            p_type = "ip67_digital" if "DIGITAL" in color_type else "ip67"
+        elif "54" in ip_str:
+            p_type = "ip54_vlhke" if "VLHKE" in ip_str else "ip54"
+        if "COB" in chip_type and p_type == "ip20":
+            p_type = "ip20_cob"
+
+        w = 60 * upscale
+        td = draw
+
+        # --- ТВОЯ ЛОГИКА ОТРИСОВКИ ГЕОМЕТРИИ ---
+        if p_type == "ip20" or p_type == "ip54" or p_type == "ip67_digital":
+            # IP20, IP54, IP67(DIGI SPI): Просто плата и чип сверху
+            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", fill="#989898", width=int(2*upscale))
+            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], outline="black", width=int(2*upscale))
+            
+        elif p_type == "ip20_cob":
+            # IP20 COB: Плата и чип дугообразный
+            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", width=int(2*upscale))
+            td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=int(2*upscale))
+
+        elif p_type == "ip67" or p_type == "ip54_vlhke":
+            # IP67: В полукруглом корпусе со стенками находится плата и чип
+            td.chord([cx-34*upscale, base_y-20*upscale, cx+34*upscale, base_y+28*upscale], 180, 360, outline="black", width=int(2*upscale))
+            td.chord([cx-30*upscale, base_y-16*upscale, cx+30*upscale, base_y+20*upscale], 180, 360, outline="black", width=int(2*upscale))
+            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=int(2*upscale))
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=int(2*upscale))
+
+        elif p_type == "ip68":
+            # IP68: В прямоугольнике со стенками находится плата и чип
+            td.rectangle([cx-34*upscale, base_y-18*upscale, cx+34*upscale, base_y+6*upscale], outline="black", width=int(2*upscale))
+            td.rectangle([cx-w//2, base_y-14*upscale, cx+w//2, base_y+3*upscale], outline="black", width=int(2*upscale))
+            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=int(2*upscale))
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=int(2*upscale))
+
+        # --- ДОБАВЛЕНИЕ РАЗМЕРНЫХ ЛИНИЙ ---
+        w_val = data.get("width", "10")
+        h_val = data.get("height", "2,1") # Берем высоту, которую ты спарсил
+
+        # 1. Ширина (снизу)
+        line_y = base_y + 40
+        td.line([cx - 34*upscale, base_y + 10, cx - 34*upscale, line_y + 10], fill="black", width=1)
+        td.line([cx + 34*upscale, base_y + 10, cx + 34*upscale, line_y + 10], fill="black", width=1)
+        td.line([cx - 34*upscale, line_y, cx + 34*upscale, line_y], fill="black", width=1)
+        # Засечки ширины
+        td.line([cx-34*upscale, line_y-7, cx-34*upscale, line_y+7], fill="black", width=1)
+        td.line([cx+34*upscale, line_y-7, cx+34*upscale, line_y+7], fill="black", width=1)
+        # Текст ширины
+        w_txt = f"{w_val} mm"
+        w_b = td.textbbox((0,0), w_txt, font=self.f_val)
+        td.text((cx - (w_b[2]-w_b[0])/2, line_y - 45), w_txt, fill="black", font=self.f_val)
+
+        # 2. Высота (справа)
+        # Рассчитываем верхнюю точку в зависимости от p_type, как в геометрии выше
+        if "ip67" in p_type or "ip54_vlhke" in p_type:
+            h_top = base_y - 20*upscale
+            h_bot = base_y + 20*upscale
+        elif p_type == "ip68":
+            h_top = base_y - 18*upscale
+            h_bot = base_y + 6*upscale
+        else:
+            h_top = base_y - 8*upscale
+            h_bot = base_y + 3*upscale
+            
+        dim_x = cx + 34*upscale + 40
+        td.line([cx + 34*upscale + 5, h_top, dim_x + 10, h_top], fill="black", width=1)
+        td.line([cx + 34*upscale + 5, h_bot, dim_x + 10, h_bot], fill="black", width=1)
+        td.line([dim_x, h_top, dim_x, h_bot], fill="black", width=1)
+        # Засечки высоты
+        td.line([dim_x-7, h_top, dim_x+7, h_top], fill="black", width=1)
+        td.line([dim_x-7, h_bot, dim_x+7, h_bot], fill="black", width=1)
+        
+        # Текст высоты
+        h_txt = str(h_val).replace('.', ',')
+        td.text((dim_x + 15, (h_top + h_bot)/2 - 15), h_txt, fill="black", font=self.f_val)
 
     def _draw_rgb(self, canvas, main_draw, x, y):
         temp_sq = Image.new('RGBA', (self.size, self.size), (0,0,0,0))

@@ -56,8 +56,8 @@ class LedApp(ctk.CTk):
         
         translations = {
             "color": "Barva světla", "kelvin": "Barevná teplota (K)", "chip": "Typ čipu", "leds": "LED/m", "power": "Výkon (W/m)", 
-            "lumen": "Světelný tok (lm/m)", "voltage": "Napětí (V)", "ip": "Krytí (IP)", "width": "Šířka (mm)", "life": "Životnost (h)", 
-            "life_l": "L parametr", "life_b": "B parametr", "cut": "Dělitelnost (mm)", "led_segment": "Počet LED na segment", 
+            "lumen": "Světelný tok (lm/m)", "voltage": "Napětí (V)", "ip": "Krytí (IP)", "width": "Šířka (mm)", "height": "Výška (mm)", 
+            "life": "Životnost (h)", "life_l": "L parametr", "life_b": "B parametr", "cut": "Dělitelnost (mm)", "led_segment": "Počet LED na segment", 
             "max_single": "Max.délka pásku single (m)", "max_double": "Max.délka pásku double (m)", "cri": "CRI",
             "angle": "Úhel vyzařování (°)", "model": "Model"
         }

@@ -102,6 +102,7 @@ def fetch_data(url):
         "voltage": r'(\d+)\s?V\b',
         "ip": r'IP(\d+)',
         "width": r'Šířka\s?\[mm\][:\s]+(\d+)',
+        "height": r'Výška / hloubka\s?\[mm\][:\s]+(\d+)',
         "model": r'Model\s*(\d{2,3}B)',
         "life_full": r'L(\d+)/B(\d+).*?\[h\]:\s*(\d+[\s.]\d+|\d+)',
         "cri": r'Index podání barev CRI[:\s]+(90-100|90)',
@@ -114,6 +115,9 @@ def fetch_data(url):
             val = match.group(1)
             if key == "chip": val = val.upper()
             if key == "cut": val = val.replace('.', ',')
+            if key == "height":
+                val = val.replace(',', '.') # Заменяем 2,1 на 2.1
+            res[key] = val
             # Специфическая логика для CRI: если нашли "90-100", запишем "90"
             if key == "cri" and "90" in val:
                 val = "90"
