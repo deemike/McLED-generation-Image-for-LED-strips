@@ -8,7 +8,7 @@ class LedImageGenerator:
     def __init__(self, width=1000, height=600):
         self.width = width
         self.height = height
-        self.size = 120
+        self.size = 124
         self.gap = 15
         self.radius = 12  # Единый радиус скругления
         self.load_fonts()
@@ -48,7 +48,7 @@ class LedImageGenerator:
         
         # Вычисляем начальную точку X, чтобы отступы слева и справа были равны
         x_start = (self.width - content_width) // 2
-        y_start = 20
+        y_start = 64
 
         volt_val = data.get("voltage", "").strip()
         v_text_circuit = f"{volt_val} V DC"
@@ -152,7 +152,7 @@ class LedImageGenerator:
                 self._draw_al_profile(draw, curr_x, curr_y)
 
         # Отрисовка увеличенной схемы внизу справа
-        self._draw_large_scheme(draw, data)
+        self._draw_large_scheme(canvas, data)
 
         return canvas
 
@@ -503,94 +503,140 @@ class LedImageGenerator:
         timg = timg.resize((self.size, self.size), Image.Resampling.LANCZOS)
         draw._image.paste(timg, (int(x), int(y)), timg)
 
-    def _draw_large_scheme(self, draw, data):
-        """Полная копия логики _draw_width_profile с увеличением"""
-        upscale = 2.8  # Коэффициент увеличения
-        cx = 780       # Позиция центра по горизонтали
-        base_y = 440   # Базовая линия (Y)
+    def _draw_large_scheme(self, canvas, data):
+        """
+        Метод с локальным суперсэмплингом, стрелочками и всеми типами корпусов.
+        """
+        import re
+        from PIL import Image, ImageDraw
+
+        # 1. Параметры области и масштаба
+        s = 4  # Коэффициент сглаживания
+        area_w, area_h = 450, 300
+        upscale = 2.8 * s
         
-        # --- ТВОЯ ЛОГИКА ОПРЕДЕЛЕНИЯ ТИПА (P_TYPE) ---
+        # Создаем временный прозрачный холст
+        temp_img = Image.new("RGBA", (area_w * s, area_h * s), (255, 255, 255, 0))
+        td = ImageDraw.Draw(temp_img)
+        
+        # Центр схемы во временном холсте
+        cx = (area_w * s) // 2 - (20 * s)
+        base_y = (area_h * s) // 2 + (85 * s)
+        
+        # --- ЛОГИКА ОПРЕДЕЛЕНИЯ ТИПА (остается вашей) ---
         ip_str = str(data.get("ip", "20")).upper()
         chip_type = str(data.get("chip", "")).upper()
         color_type = str(data.get("color", "")).upper()
+        model_val = str(data.get("model", "")).upper().strip()
+        if not model_val:
+            m_search = re.search(r'(\d{2}B)', str(data))
+            model_val = m_search.group(1) if m_search else ""
         
+        target_models = ["79B", "80B", "81B", "82B", "83B", "84B"]
         p_type = "ip20"
-        if "68" in ip_str: p_type = "ip68"
-        elif "67" in ip_str:
-            p_type = "ip67_digital" if "DIGITAL" in color_type else "ip67"
+        if "DIGITAL SPI" in color_type: p_type = "ip67_digital"
         elif "54" in ip_str:
-            p_type = "ip54_vlhke" if "VLHKE" in ip_str else "ip54"
-        if "COB" in chip_type and p_type == "ip20":
-            p_type = "ip20_cob"
+            p_type = "ip54_vlhke" if (model_val in target_models or "VLHK" in ip_str or "NANO" in ip_str) else "ip54"
+        elif "67" in ip_str: p_type = "ip67"
+        elif "68" in ip_str: p_type = "ip68"
+        elif "20" in ip_str: p_type = "ip20_cob" if "COB" in chip_type else "ip20"
 
-        w = 60 * upscale
-        td = draw
-
-        # --- ТВОЯ ЛОГИКА ОТРИСОВКИ ГЕОМЕТРИИ ---
-        if p_type == "ip20" or p_type == "ip54" or p_type == "ip67_digital":
-            # IP20, IP54, IP67(DIGI SPI): Просто плата и чип сверху
-            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", fill="#989898", width=int(2*upscale))
-            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], outline="black", width=int(2*upscale))
+        # --- ОТРИСОВКА КОРПУСА ---
+        line_w = int(2.5 * s)
+        w_rect = int(29 * upscale) # Полуширина платы
+        
+        if p_type in ["ip20", "ip54", "ip67_digital"]:
+            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", fill="#989898", width=line_w)
+            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y-1*upscale], outline="black", width=line_w)
             
         elif p_type == "ip20_cob":
-            # IP20 COB: Плата и чип дугообразный
-            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", width=int(2*upscale))
-            td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=int(2*upscale))
+            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", fill="#989898", width=line_w)
+            td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+6*upscale], 180, 360, outline="black", width=line_w)
 
-        elif p_type == "ip67" or p_type == "ip54_vlhke":
-            # IP67: В полукруглом корпусе со стенками находится плата и чип
-            td.chord([cx-34*upscale, base_y-20*upscale, cx+34*upscale, base_y+28*upscale], 180, 360, outline="black", width=int(2*upscale))
-            td.chord([cx-30*upscale, base_y-16*upscale, cx+30*upscale, base_y+20*upscale], 180, 360, outline="black", width=int(2*upscale))
-            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=int(2*upscale))
-            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=int(2*upscale))
+        elif p_type in ["ip67", "ip54_vlhke"]:
+            td.chord([cx-35*upscale, base_y-22*upscale, cx+35*upscale, base_y+28*upscale], 178, 362, outline="black", width=line_w)
+            td.chord([cx-31*upscale, base_y-18*upscale, cx+31*upscale, base_y+20*upscale], 178, 362, outline="black", width=line_w)
+            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+1*upscale], outline="black", fill="#989898", width=line_w)
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-1*upscale], outline="black", width=line_w)
 
         elif p_type == "ip68":
-            # IP68: В прямоугольнике со стенками находится плата и чип
-            td.rectangle([cx-34*upscale, base_y-18*upscale, cx+34*upscale, base_y+6*upscale], outline="black", width=int(2*upscale))
-            td.rectangle([cx-w//2, base_y-14*upscale, cx+w//2, base_y+3*upscale], outline="black", width=int(2*upscale))
-            td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=int(2*upscale))
-            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=int(2*upscale))
+            td.rectangle([cx-w_rect-39, base_y-18*upscale, cx+w_rect+39, base_y+3*upscale], outline="black", width=line_w)
+            td.rectangle([cx-w_rect, base_y-15*upscale, cx+w_rect, base_y], outline="black", width=line_w)
+            td.rectangle([cx-w_rect+14, base_y-3*upscale, cx+w_rect-14, base_y], outline="black", fill="#989898", width=line_w)
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-2*upscale], outline="black", width=line_w)
 
-        # --- ДОБАВЛЕНИЕ РАЗМЕРНЫХ ЛИНИЙ ---
-        w_val = data.get("width", "10")
-        h_val = data.get("height", "2,1") # Берем высоту, которую ты спарсил
 
-        # 1. Ширина (снизу)
-        line_y = base_y + 40
-        td.line([cx - 34*upscale, base_y + 10, cx - 34*upscale, line_y + 10], fill="black", width=1)
-        td.line([cx + 34*upscale, base_y + 10, cx + 34*upscale, line_y + 10], fill="black", width=1)
-        td.line([cx - 34*upscale, line_y, cx + 34*upscale, line_y], fill="black", width=1)
-        # Засечки ширины
-        td.line([cx-34*upscale, line_y-7, cx-34*upscale, line_y+7], fill="black", width=1)
-        td.line([cx+34*upscale, line_y-7, cx+34*upscale, line_y+7], fill="black", width=1)
-        # Текст ширины
-        w_txt = f"{w_val} mm"
-        w_b = td.textbbox((0,0), w_txt, font=self.f_val)
-        td.text((cx - (w_b[2]-w_b[0])/2, line_y - 45), w_txt, fill="black", font=self.f_val)
-
-        # 2. Высота (справа)
-        # Рассчитываем верхнюю точку в зависимости от p_type, как в геометрии выше
-        if "ip67" in p_type or "ip54_vlhke" in p_type:
-            h_top = base_y - 20*upscale
-            h_bot = base_y + 20*upscale
-        elif p_type == "ip68":
-            h_top = base_y - 18*upscale
-            h_bot = base_y + 6*upscale
-        else:
-            h_top = base_y - 8*upscale
-            h_bot = base_y + 3*upscale
-            
-        dim_x = cx + 34*upscale + 40
-        td.line([cx + 34*upscale + 5, h_top, dim_x + 10, h_top], fill="black", width=1)
-        td.line([cx + 34*upscale + 5, h_bot, dim_x + 10, h_bot], fill="black", width=1)
-        td.line([dim_x, h_top, dim_x, h_bot], fill="black", width=1)
-        # Засечки высоты
-        td.line([dim_x-7, h_top, dim_x+7, h_top], fill="black", width=1)
-        td.line([dim_x-7, h_bot, dim_x+7, h_bot], fill="black", width=1)
+        # --- РАЗМЕРНЫЕ ЛИНИИ И СТРЕЛКИ ---
+        draw_line_w = max(1, s // 2)
         
-        # Текст высоты
+        # 1. ШИРИНА (Горизонтальная)
+        width_y = base_y + 45 * s
+        x_left, x_right = cx - w_rect, cx + w_rect
+        
+        # Засечки ширины
+        td.line([x_left, base_y + 10*s, x_left, width_y + 10*s], fill="black", width=draw_line_w)
+        td.line([x_right, base_y + 10*s, x_right, width_y + 10*s], fill="black", width=draw_line_w)
+        # Линия со стрелками
+        td.line([x_left, width_y, x_right, width_y], fill="black", width=draw_line_w)
+        # Стрелки ширины (треугольники)
+        td.polygon([(x_left, width_y), (x_left + 6*s, width_y - 3*s), (x_left + 6*s, width_y + 3*s)], fill="black")
+        td.polygon([(x_right, width_y), (x_right - 6*s, width_y - 3*s), (x_right - 6*s, width_y + 3*s)], fill="black")
+
+        # 2. ВЫСОТА (Вертикальная)
+        # Определяем верхнюю точку корпуса
+        if p_type == "ip68": top_y = base_y - 18 * upscale
+        elif p_type in ["ip67", "ip54_vlhke"]: top_y = base_y - 22 * upscale
+        else: top_y = base_y - 10 * upscale
+        
+        bottom_y = base_y + 3 * upscale
+        line_x = cx + w_rect + 25 * s
+        
+        # Засечки высоты
+        td.line([line_x - 10*s, top_y, line_x + 5*s, top_y], fill="black", width=draw_line_w)
+        td.line([line_x - 10*s, bottom_y, line_x + 5*s, bottom_y], fill="black", width=draw_line_w)
+        # Линия со стрелками
+        td.line([line_x, top_y, line_x, bottom_y], fill="black", width=draw_line_w)
+        # Стрелки высоты
+        td.polygon([(line_x, top_y), (line_x - 3*s, top_y + 6*s), (line_x + 3*s, top_y + 6*s)], fill="black")
+        td.polygon([(line_x, bottom_y), (line_x - 3*s, bottom_y - 6*s), (line_x + 3*s, bottom_y - 6*s)], fill="black")
+
+        # --- СЖАТИЕ И ВСТАВКА ---
+        smooth_scheme = temp_img.resize((area_w, area_h), resample=Image.LANCZOS)
+        
+        paste_x = self.width - area_w - 10
+        paste_y = 280
+        canvas.paste(smooth_scheme, (paste_x, paste_y), smooth_scheme)
+        
+        # --- ТЕКСТ (Поверх, обычным шрифтом) ---
+        draw = ImageDraw.Draw(canvas)
+        w_val = data.get("width", "10")
+        h_val = data.get("height_val", data.get("height", "2,1"))
+        
+        # Ширина
+        w_txt = f"{w_val} mm"
+        w_bbox = draw.textbbox((0, 0), w_txt, font=self.f_val)
+        w_width = w_bbox[2] - w_bbox[0]
+        draw.text((paste_x + (area_w - 40)//2 - w_width//2, paste_y + area_h - 50), w_txt, fill="black", font=self.f_val)
+        
+        # 2. ВЫСОТА (вертикальный текст, центрированный по оси Y)
         h_txt = str(h_val).replace('.', ',')
-        td.text((dim_x + 15, (h_top + h_bot)/2 - 15), h_txt, fill="black", font=self.f_val)
+        h_bbox = draw.textbbox((0, 0), h_txt, font=self.f_val)
+        h_height = h_bbox[3] + h_bbox[1]  # Реальная высота текста
+        
+        # Вычисляем центр линии высоты в координатах основного холста
+        # (top_y и bottom_y были в масштабе s, переводим их в обычный масштаб)
+        line_top_final = paste_y + (top_y / s)
+        line_bottom_final = paste_y + (bottom_y / s)
+        line_center_y = (line_top_final + line_bottom_final) / 2
+        
+        # Итоговая координата Y для текста: центр линии минус половина высоты текста
+        text_y = line_center_y - h_height / 2
+        
+        # Координата X (справа от линии высоты)
+        # line_x тоже был в масштабе s
+        text_x = paste_x + (line_x / s) + 10 
+        
+        draw.text((text_x, text_y), h_txt, fill="black", font=self.f_val)
 
     def _draw_rgb(self, canvas, main_draw, x, y):
         temp_sq = Image.new('RGBA', (self.size, self.size), (0,0,0,0))
@@ -762,17 +808,40 @@ class LedImageGenerator:
             draw.line([x + self.size - 20, y + arrow_y, x + self.size - 25, y + arrow_y + 3], fill="black", width=1)
             self.draw_circuit(draw, x, y, self.size, "single" if field == "max_single" else "double", v_text)
         elif field == "cut":
-            led_val = full_data.get("led_segment", "").strip()
+            # 1. Сначала ищем в стандартных полях
+            led_val = str(full_data.get("led_segment", "")).strip()
+            
+            # 2. Если пусто, ищем в описании (вашем debug_source.txt)
+            if not led_val or led_val == "0":
+                # Берем все данные в одну строку для поиска
+                all_text = " ".join(str(v) for v in full_data.values())
+                # Ищем комбинации типа "120LED", "120 LED", "120LED/m"
+                match = re.search(r'(\d+)\s*LED', all_text, re.IGNORECASE)
+                if match:
+                    led_val = match.group(1)
+
+            # Очистка на случай, если пришло что-то странное
+            led_val = "".join(filter(str.isdigit, led_val)) if led_val else "0"
+
+            # 3. ОТРИСОВКА (Ваша структура с исправленными координатами)
+            # Верхняя часть: Число + LED
             w_l = draw.textbbox((0,0), led_val, font=self.f_cut_num)[2]
             draw.text((x + 35 - w_l/2, y + 15), led_val, fill="black", font=self.f_cut_num)
             draw.text((x + 40 + w_l/2, y + 15), "LED", fill="black", font=self.f_mid)
+            
+            # Разделительная линия
             line_y = y + 55
             draw.line([x + 15, line_y, x + self.size - 15, line_y], fill="black", width=2)
             draw.line([x + 15, line_y - 5, x + 15, line_y + 5], fill="black", width=2)
             draw.line([x + self.size - 15, line_y - 5, x + self.size - 15, line_y + 5], fill="black", width=2)
+            
+            # Нижняя часть: Кратность резки (val) + mm
             w_m = draw.textbbox((0,0), val, font=self.f_cut_num)[2]
             draw.text((x + (self.size - w_m)/2, y + 65), val, fill="black", font=self.f_cut_num)
-            draw.text((x + 40, y + 90), "mm", fill="black", font=self.f_mid)
+            
+            # Центрируем надпись "mm"
+            w_mm = draw.textbbox((0,0), "mm", font=self.f_mid)[2]
+            draw.text((x + (self.size - w_mm)/2, y + 90), "mm", fill="black", font=self.f_mid)
         elif field == "width":
             # Логика выбора иконки по твоим пунктам
             ip_val = str(full_data.get("ip", "")).strip()

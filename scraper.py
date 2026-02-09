@@ -96,7 +96,7 @@ def fetch_data(url):
         "cut": r'Dělitelnost pásku po\s?\[mm\][:\s]+(\d+[.,]\d+|\d+)',
         "kelvin": r'Barevná teplota.*?(\d+\s?-\s?\d+)',
         "chip": r'(SMD\s?\d+|COB)',
-        "leds": r'(\d+)\s?LED/m',
+        "leds": r'Počet LED na metr\s?\[-\][:\s]+(\d+)',
         "power": r'(\d+[.,]\d+|\d+)\s?W/m',
         "lumen": r'(\d+)\s?lm/m',
         "voltage": r'(\d+)\s?V\b',
