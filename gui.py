@@ -9,15 +9,14 @@ import time
 import random
 
 import config
-# Změna importu - musíme importovat i get_driver pro dávkové zpracování
-from scraper import fetch_data, get_driver 
+from scraper import fetch_data, get_driver
 from drawer import LedImageGenerator
 
 class LedApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("McLED Visual Pro v1.3 (Smart Batch)")
+        self.title("McLED Visual Pro v1.4 (Robust Batch)")
         self.geometry("1000x850")
         
         ctk.set_appearance_mode(config.APPEARANCE_MODE)
@@ -109,7 +108,6 @@ class LedApp(ctk.CTk):
         self.after(400, lambda: self._animate_loading(base_text, count + 1))
 
     def show_status(self, message, mode="info", progress=None):
-        """Zobrazí status zprávu a případně progress bar"""
         self.progress_bar.pack_forget()
         
         if mode == "loading":
@@ -152,7 +150,6 @@ class LedApp(ctk.CTk):
 
     def _fetch_thread(self, url):
         try:
-            # Pro jeden odkaz nevadí, že si vytvoří vlastní driver
             data = fetch_data(url)
             self.after(0, lambda: self._update_fields(data))
         except Exception as e:
@@ -185,7 +182,7 @@ class LedApp(ctk.CTk):
         except Exception as e:
             self.show_status(f"Chyba při generování: {e}", mode="error")
 
-    # --- HROMADNÉ ZPRACOVÁNÍ (SMART BATCH) ---
+    # --- HROMADNÉ ZPRACOVÁNÍ (ROBUST BATCH) ---
 
     def transform_code_to_url(self, code):
         clean_code = code.strip().lower().replace('.', '-')
@@ -255,31 +252,36 @@ class LedApp(ctk.CTk):
                     url = self.transform_code_to_url(code)
                     print(f"Batch ({i+1}/{total}): {code} -> {url}")
                     
-                    # 2. Inteligentní pauza proti blokování (2-5 sekund)
+                    # 2. Inteligentní pauza proti blokování (1.5 - 3.5 sekund stačí)
                     if i > 0:
-                        delay = random.uniform(2.0, 5.0)
+                        delay = random.uniform(1.5, 3.5)
                         time.sleep(delay)
                     
-                    # 3. Stáhnout data s POUŽITÍM STÁVAJÍCÍHO DRIVERU
+                    # 3. Stáhnout data
                     data = fetch_data(url, driver=driver)
                     
-                    if not data or not data.get("model"):
+                    # Pokud je slovník prázdný, znamená to, že se nepodařilo nic načíst (např. 404)
+                    if not data:
                         print(f"Warning: No valid data found for {url}")
-                        # Ještě jeden pokus s delší pauzou, pokud selhalo
-                        time.sleep(5)
+                        # Zkusíme ještě jednou s delší pauzou
+                        time.sleep(4)
                         data = fetch_data(url, driver=driver)
                         
-                        if not data or not data.get("model"):
+                        if not data:
                             errors.append(code)
                             continue
 
-                    # 4. Generovat a uložit
-                    img = self.generator.generate(data)
-                    clean_name = code.strip().replace('/', '-').replace('\\', '-')
-                    filename = f"{clean_name}_30.jpg"
-                    
-                    img.save(filename, "JPEG", quality=95)
-                    success_count += 1
+                    # 4. Generovat a uložit (i když chybí některé parametry)
+                    try:
+                        img = self.generator.generate(data)
+                        clean_name = code.strip().replace('/', '-').replace('\\', '-')
+                        filename = f"{clean_name}_30.jpg"
+                        
+                        img.save(filename, "JPEG", quality=95)
+                        success_count += 1
+                    except Exception as gen_err:
+                        print(f"Chyba při kreslení {code}: {gen_err}")
+                        errors.append(code)
                     
                 except Exception as e:
                     print(f"Error processing {code}: {e}")
@@ -290,7 +292,6 @@ class LedApp(ctk.CTk):
             self.after(0, lambda: self.show_status(f"Kritická chyba: {global_e}", mode="error"))
             
         finally:
-            # 5. Vždy zavřít prohlížeč na konci
             if driver:
                 try:
                     driver.quit()
