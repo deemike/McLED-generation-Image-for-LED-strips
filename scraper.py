@@ -8,55 +8,65 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 import config
 
-def fetch_data(url):
+def get_driver():
+    """Vytvoří a vrátí instanci prohlížeče pro opakované použití."""
     options = Options()
     options.add_argument("--headless")
-    
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--log-level=3")
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+def fetch_data(url, driver=None):
+    should_quit = False
+    if driver is None:
+        driver = get_driver()
+        should_quit = True
+
     try:
         driver.get(url)
-        time.sleep(3)
+        time.sleep(1.5) # Kratší pauza stačí, pokud driver běží
         
-        source = driver.find_element(By.TAG_NAME, "body").text
+        # Zkusíme najít body
+        try:
+            body_elem = driver.find_element(By.TAG_NAME, "body")
+            source = body_elem.text
+        except:
+            source = ""
 
-        # --- ДОБАВЬТЕ ЭТО ДЛЯ ОТЛАДКИ ---
-        # with open("debug_source.txt", "w", encoding="utf-8") as f:
-        #     f.write(source)
-        # print("Текст страницы сохранен в файл debug_source.txt для проверки.")
-        # -------------------------------
+    except Exception as e:
+        print(f"Chyba při stahování {url}: {e}")
+        source = ""
     finally:
-        driver.quit()
+        if should_quit:
+            driver.quit()
+
+    if not source:
+        return {}
 
     res = {}
 
-    # --- ЛОГИКА ОПРЕДЕЛЕНИЯ ЦВЕТА (Barva světla) ---
-    # Сначала ищем сложные типы, потом простые
+    # --- LOGIKA BAREV ---
     src_upper = source.upper()
     
     # 1. Digital SPI
     if re.search(r'Barva světla[:\s]+Digital SPI', source, re.IGNORECASE):
         res["color"] = "DIGITAL SPI"
-    
     # 2. RGB+CCT
     elif re.search(r'Barva světla[:\s]+barevný RGB\+CCT', source, re.IGNORECASE):
         res["color"] = "RGB+CCT"
-        
-    # 3. RGBW (RGB+NW/CW/WW)
+    # 3. RGBW
     elif re.search(r'Barva světla[:\s]+barevný RGB\+(NW|CW|WW)', source, re.IGNORECASE):
         match = re.search(r'Barva světla[:\s]+barevný RGB\+(NW|CW|WW)', source, re.IGNORECASE)
         res["color"] = f"RGB+{match.group(1).upper()}"
-        
-    # 4. Просто RGB
+    # 4. RGB
     elif re.search(r'Barva světla[:\s]+barevný - RGB\b', source, re.IGNORECASE):
         res["color"] = "RGB"
-
-    # 5. Dual White (EWW-CW, WW-CW, WW-UWW)
+    # 5. Dual White
     elif re.search(r'Barva světla[:\s]+duální bílá\s+([A-Z]+-[A-Z]+)', source, re.IGNORECASE):
         match = re.search(r'Barva světla[:\s]+duální bílá\s+([A-Z]+-[A-Z]+)', source, re.IGNORECASE)
-        # Превращаем "EWW-CW" в "EWW+CW" для удобства
         res["color"] = match.group(1).upper().replace("-", "+")
-
-    # 6. DW (Daylight White)
+    # 6. Jednobarevné spec.
     elif re.search(r'Barva světla[:\s]+denní bílý DW', source, re.IGNORECASE):
         res["color"] = "DW"
     elif re.search(r'Barva světla[:\s]+studeně bílý CW', source, re.IGNORECASE):
@@ -65,12 +75,8 @@ def fetch_data(url):
         res["color"] = "NW"
     elif re.search(r'Barva světla[:\s]+teple bílý WW', source, re.IGNORECASE):
         res["color"] = "WW"
-
-    # 7. UVA
     elif re.search(r'Barva světla[:\s]+UVA', source, re.IGNORECASE):
         res["color"] = "UVA"
-    
-    # 8. Jednobarevné (R, G, B, Y)
     elif re.search(r'Modrá|modrý B', source, re.IGNORECASE):
         res["color"] = "B"
     elif re.search(r'Červená|červený R', source, re.IGNORECASE):
@@ -79,16 +85,13 @@ def fetch_data(url):
         res["color"] = "G"
     elif re.search(r'Žlutá|žlutý Y', source, re.IGNORECASE):
         res["color"] = "Y"
-
-    # 8. Стандартные (EWW, WW, NW, CW, etc.) - если не найдено выше
     else:
         for c in config.COLOR_MAP_LIGHT.keys():
-            # Ищем точное совпадение слова, чтобы UWW не находило внутри WW
             if re.search(r'\b' + c + r'\b', src_upper):
                 res["color"] = c
                 break
 
-    # --- ОСТАЛЬНЫЕ ПАРАМЕТРЫ ---
+    # --- PARAMETRY ---
     patterns = {
         "max_single": r'Max\. délka pásku při jednostranném napájení.*?(\d+)',
         "max_double": r'Max\. délka pásku při oboustranném napájení.*?(\d+)',
@@ -103,7 +106,7 @@ def fetch_data(url):
         "ip": r'IP(\d+)',
         "width": r'Šířka\s?\[mm\][:\s]+(\d+)',
         "height": r'Výška / hloubka\s?\[mm\][:\s]+(\d+)',
-        "model": r'Model\s*(\d{2,3}B)',
+        "model": r'Model\s*(\d{2,3}B)', # Původní regex
         "life_full": r'L(\d+)/B(\d+).*?\[h\]:\s*(\d+[\s.]\d+|\d+)',
         "cri": r'Index podání barev CRI[:\s]+(90-100|90)',
         "angle": r'Úhel vyzařování\s?\[°\][:\s]+(\d+)'
@@ -115,29 +118,24 @@ def fetch_data(url):
             val = match.group(1)
             if key == "chip": val = val.upper()
             if key == "cut": val = val.replace('.', ',')
-            if key == "height":
-                val = val.replace(',', '.') # Заменяем 2,1 на 2.1
+            if key == "height": val = val.replace(',', '.')
+            if key == "cri" and "90" in val: val = "90"
+            
             res[key] = val
-            # Специфическая логика для CRI: если нашли "90-100", запишем "90"
-            if key == "cri" and "90" in val:
-                val = "90"
-            res[key] = val
+            
             if key == "life_full":
                 res["life_l"] = match.group(1)
                 res["life_b"] = match.group(2)
                 res["life"] = match.group(3).replace(" ", "").replace(".", "")
-            else:
-                val = match.group(1)
-                if key == "chip": val = val.upper()
-                if key == "cut": val = val.replace('.', ',')
-                if key == "cri" and "90" in val: val = "90"
-                res[key] = val
 
-    if "model" not in res or not res["model"]:
-        check_model = re.search(r'Model\s*(\d{2,3}B)', source, re.IGNORECASE)
-        if check_model:
-            res["model"] = check_model.group(1).upper()
+    # --- FALLBACK PRO MODEL ---
+    # Pokud nebyl nalezen "Model XXB", zkusíme najít kód ML-XXXX v textu, nebo necháme prázdné
+    if "model" not in res:
+        # Zkusíme najít ML kód v textu
+        ml_match = re.search(r'(ML-\d{3}[.\-]\d{3}[.\-]\d{2}[.\-][0-9X])', source, re.IGNORECASE)
+        if ml_match:
+            res["model"] = ml_match.group(1).upper()
         else:
-            res["model"] = "" # Создаем пустой ключ, чтобы не было ошибки None
+            res["model"] = "" # Aby nechyběl klíč
 
     return res
