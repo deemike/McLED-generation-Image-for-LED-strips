@@ -8,29 +8,49 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 import config
 
-def fetch_data(url):
+def get_driver():
+    """Vytvoří a vrátí instanci prohlížeče pro opakované použití."""
     options = Options()
     options.add_argument("--headless")
+    # Přidáme user-agent, aby to vypadalo více jako běžný prohlížeč
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+    options.add_argument("--disable-blink-features=AutomationControlled")
     
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # Potlačení logů
+    options.add_argument("--log-level=3")
+    
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+def fetch_data(url, driver=None):
+    """
+    Stáhne data z URL.
+    Pokud je předán 'driver', použije ho (a nezavře).
+    Pokud 'driver' není předán, vytvoří si nový a po dokončení ho zavře.
+    """
+    should_quit = False
+    if driver is None:
+        driver = get_driver()
+        should_quit = True
+
     try:
         driver.get(url)
-        time.sleep(3)
+        # Krátká pauza pro načtení JavaScriptu
+        time.sleep(2)
         
         source = driver.find_element(By.TAG_NAME, "body").text
-
-        # --- ДОБАВЬТЕ ЭТО ДЛЯ ОТЛАДКИ ---
-        # with open("debug_source.txt", "w", encoding="utf-8") as f:
-        #     f.write(source)
-        # print("Текст страницы сохранен в файл debug_source.txt для проверки.")
-        # -------------------------------
+    except Exception as e:
+        print(f"Chyba při stahování {url}: {e}")
+        source = ""
     finally:
-        driver.quit()
+        if should_quit:
+            driver.quit()
+
+    if not source:
+        return {}
 
     res = {}
 
-    # --- ЛОГИКА ОПРЕДЕЛЕНИЯ ЦВЕТА (Barva světla) ---
-    # Сначала ищем сложные типы, потом простые
+    # --- LOGIKA OPRЕДELENÍ ЦВЕТА (Barva světla) ---
     src_upper = source.upper()
     
     # 1. Digital SPI
@@ -53,7 +73,6 @@ def fetch_data(url):
     # 5. Dual White (EWW-CW, WW-CW, WW-UWW)
     elif re.search(r'Barva světla[:\s]+duální bílá\s+([A-Z]+-[A-Z]+)', source, re.IGNORECASE):
         match = re.search(r'Barva světla[:\s]+duální bílá\s+([A-Z]+-[A-Z]+)', source, re.IGNORECASE)
-        # Превращаем "EWW-CW" в "EWW+CW" для удобства
         res["color"] = match.group(1).upper().replace("-", "+")
 
     # 6. DW (Daylight White)
@@ -80,10 +99,9 @@ def fetch_data(url):
     elif re.search(r'Žlutá|žlutý Y', source, re.IGNORECASE):
         res["color"] = "Y"
 
-    # 8. Стандартные (EWW, WW, NW, CW, etc.) - если не найдено выше
+    # 8. Стандартные (EWW, WW, NW, CW, etc.)
     else:
         for c in config.COLOR_MAP_LIGHT.keys():
-            # Ищем точное совпадение слова, чтобы UWW не находило внутри WW
             if re.search(r'\b' + c + r'\b', src_upper):
                 res["color"] = c
                 break
@@ -116,28 +134,23 @@ def fetch_data(url):
             if key == "chip": val = val.upper()
             if key == "cut": val = val.replace('.', ',')
             if key == "height":
-                val = val.replace(',', '.') # Заменяем 2,1 на 2.1
+                val = val.replace(',', '.')
+            
             res[key] = val
-            # Специфическая логика для CRI: если нашли "90-100", запишем "90"
+            
             if key == "cri" and "90" in val:
                 val = "90"
-            res[key] = val
+                res[key] = val
+            
             if key == "life_full":
                 res["life_l"] = match.group(1)
                 res["life_b"] = match.group(2)
                 res["life"] = match.group(3).replace(" ", "").replace(".", "")
-            else:
-                val = match.group(1)
-                if key == "chip": val = val.upper()
-                if key == "cut": val = val.replace('.', ',')
-                if key == "cri" and "90" in val: val = "90"
-                res[key] = val
 
     if "model" not in res or not res["model"]:
         check_model = re.search(r'Model\s*(\d{2,3}B)', source, re.IGNORECASE)
         if check_model:
             res["model"] = check_model.group(1).upper()
-        else:
-            res["model"] = "" # Создаем пустой ключ, чтобы не было ошибки None
+        # Pokud model nebyl nalezen, nevracíme ho, aby volající poznal chybu
 
     return res

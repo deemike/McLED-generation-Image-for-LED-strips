@@ -6,16 +6,18 @@ import threading
 import os
 import csv
 import time
+import random
 
 import config
-from scraper import fetch_data
+# Změna importu - musíme importovat i get_driver pro dávkové zpracování
+from scraper import fetch_data, get_driver 
 from drawer import LedImageGenerator
 
 class LedApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("McLED Visual Pro v1.2 (Batch Fix)")
+        self.title("McLED Visual Pro v1.3 (Smart Batch)")
         self.geometry("1000x850")
         
         ctk.set_appearance_mode(config.APPEARANCE_MODE)
@@ -150,6 +152,7 @@ class LedApp(ctk.CTk):
 
     def _fetch_thread(self, url):
         try:
+            # Pro jeden odkaz nevadí, že si vytvoří vlastní driver
             data = fetch_data(url)
             self.after(0, lambda: self._update_fields(data))
         except Exception as e:
@@ -182,27 +185,16 @@ class LedApp(ctk.CTk):
         except Exception as e:
             self.show_status(f"Chyba při generování: {e}", mode="error")
 
-    # --- HROMADNÉ ZPRACOVÁNÍ (BATCH FIX) ---
+    # --- HROMADNÉ ZPRACOVÁNÍ (SMART BATCH) ---
 
     def transform_code_to_url(self, code):
-        """
-        Převede 'ML-128.011.90.0' na 'https://www.mcled.cz/ml-128-011-90-x'
-        """
-        # 1. Normalizace: odstranit mezery, malé písmo, tečky na pomlčky
         clean_code = code.strip().lower().replace('.', '-')
-        
-        # 2. Rozdělení na části
         parts = clean_code.split('-')
         
-        # 3. Logika nahrazení posledního čísla za 'x'
-        # Očekáváme např. ml, 128, 011, 90, 0 (5 částí)
-        # Nebo ml, 126, 676, 60, x
         if len(parts) >= 4:
-            # Vezmeme vše kromě posledního a přidáme x
             base = "-".join(parts[:-1])
             return f"https://www.mcled.cz/{base}-x"
         
-        # Fallback pro krátké kódy
         return f"https://www.mcled.cz/{clean_code}"
 
     def load_batch_file(self):
@@ -216,27 +208,17 @@ class LedApp(ctk.CTk):
             
         try:
             codes = []
-            # Čteme řádek po řádku ručně, abychom se vyhnuli chybné detekci tečky jako oddělovače
             with open(file_path, 'r', encoding='utf-8-sig', errors='replace') as f:
                 for line in f:
                     line = line.strip()
-                    if not line:
-                        continue
-                        
-                    # Zkusíme rozdělit podle středníku nebo čárky, pokud tam jsou
-                    # Ale tečku (.) ignorujeme jako oddělovač
-                    val = line
-                    if ';' in line:
-                        val = line.split(';')[0].strip()
-                    elif ',' in line:
-                        # Pozor: u čárky musíme být opatrní, pokud je to desetinná čárka,
-                        # ale u ML kódů se čárky obvykle nepoužívají uvnitř kódu
-                        val = line.split(',')[0].strip()
+                    if not line: continue
                     
-                    # Vyčistíme uvozovky
+                    val = line
+                    if ';' in line: val = line.split(';')[0].strip()
+                    elif ',' in line: val = line.split(',')[0].strip()
+                    
                     val = val.replace('"', '').replace("'", "")
                     
-                    # Základní kontrola, zda to vypadá jako ML kód
                     if val.upper().startswith("ML"):
                         codes.append(val)
             
@@ -244,7 +226,7 @@ class LedApp(ctk.CTk):
                 self.show_status("Nebyly nalezeny žádné platné ML kódy.", mode="error")
                 return
 
-            self.show_status(f"Načteno {len(codes)} položek. Začínám zpracování...", mode="loading", progress=0.0)
+            self.show_status(f"Načteno {len(codes)} položek. Startuji prohlížeč...", mode="loading", progress=0.0)
             self.btn_batch.configure(state="disabled")
             
             threading.Thread(target=self._process_batch_thread, args=(codes,), daemon=True).start()
@@ -256,50 +238,72 @@ class LedApp(ctk.CTk):
         total = len(codes)
         success_count = 0
         errors = []
-        
-        for i, code in enumerate(codes):
-            try:
-                # Výpočet progressu
-                progress = i / total
-                remaining = total - i
-                
-                self.after(0, lambda i=i, remaining=remaining, progress=progress, code=code: 
-                           self.show_status(f"Zpracovávám {i+1}/{total}: {code}", mode="loading", progress=progress))
-                
-                url = self.transform_code_to_url(code)
-                print(f"Batch: {code} -> {url}")
-                
-                # 1. Stáhnout data
-                data = fetch_data(url)
-                
-                # Pokud se vrátila prázdná data nebo chybí klíčové pole, je to chyba
-                if not data or not data.get("model"):
-                     print(f"Warning: No valid data found for {url}")
-                     errors.append(code)
-                     continue
+        driver = None
 
-                # 2. Generovat obrázek
-                img = self.generator.generate(data)
-                
-                # 3. Uložit - POUŽIJEME PŮVODNÍ KÓD Z TABULKY PRO NÁZEV SOUBORU
-                # Nahradíme jen znaky, které v názvu souboru nesmí být
-                clean_name = code.strip().replace('/', '-').replace('\\', '-')
-                filename = f"{clean_name}_30.jpg"
-                
-                img.save(filename, "JPEG", quality=95)
-                success_count += 1
-                
-            except Exception as e:
-                print(f"Error processing {code}: {e}")
-                errors.append(code)
-
-        # Hotovo
-        final_msg = f"HOTOVO! Vygenerováno {success_count} z {total}."
-        if errors:
-            final_msg += f" (Chyby: {len(errors)})"
+        try:
+            # 1. Start prohlížeče
+            driver = get_driver()
             
-        self.after(0, lambda: self.btn_batch.configure(state="normal"))
-        self.after(0, lambda: self.show_status(final_msg, mode="success" if success_count > 0 else "error"))
+            for i, code in enumerate(codes):
+                try:
+                    progress = i / total
+                    remaining = total - i
+                    
+                    self.after(0, lambda i=i, remaining=remaining, progress=progress, code=code: 
+                               self.show_status(f"Zpracovávám {i+1}/{total}: {code}", mode="loading", progress=progress))
+                    
+                    url = self.transform_code_to_url(code)
+                    print(f"Batch ({i+1}/{total}): {code} -> {url}")
+                    
+                    # 2. Inteligentní pauza proti blokování (2-5 sekund)
+                    if i > 0:
+                        delay = random.uniform(2.0, 5.0)
+                        time.sleep(delay)
+                    
+                    # 3. Stáhnout data s POUŽITÍM STÁVAJÍCÍHO DRIVERU
+                    data = fetch_data(url, driver=driver)
+                    
+                    if not data or not data.get("model"):
+                        print(f"Warning: No valid data found for {url}")
+                        # Ještě jeden pokus s delší pauzou, pokud selhalo
+                        time.sleep(5)
+                        data = fetch_data(url, driver=driver)
+                        
+                        if not data or not data.get("model"):
+                            errors.append(code)
+                            continue
+
+                    # 4. Generovat a uložit
+                    img = self.generator.generate(data)
+                    clean_name = code.strip().replace('/', '-').replace('\\', '-')
+                    filename = f"{clean_name}_30.jpg"
+                    
+                    img.save(filename, "JPEG", quality=95)
+                    success_count += 1
+                    
+                except Exception as e:
+                    print(f"Error processing {code}: {e}")
+                    errors.append(code)
+
+        except Exception as global_e:
+            print(f"Critical Batch Error: {global_e}")
+            self.after(0, lambda: self.show_status(f"Kritická chyba: {global_e}", mode="error"))
+            
+        finally:
+            # 5. Vždy zavřít prohlížeč na konci
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+            
+            # Finální zpráva
+            final_msg = f"HOTOVO! Vygenerováno {success_count} z {total}."
+            if errors:
+                final_msg += f" (Chyby: {len(errors)})"
+                
+            self.after(0, lambda: self.btn_batch.configure(state="normal"))
+            self.after(0, lambda: self.show_status(final_msg, mode="success" if success_count > 0 else "error"))
 
 if __name__ == "__main__":
     app = LedApp()
