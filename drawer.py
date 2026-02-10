@@ -260,16 +260,16 @@ class LedImageGenerator:
             
         w_v = draw.textbbox((0,0), voltage_text, font=f_circ)[2]
         text_x = x + (size - w_v) / 2
-        text_y = y + 85
+        text_y = y + 80
         draw.text((text_x, text_y), voltage_text, fill="black", font=f_circ)
 
         h_v = draw.textbbox((0,0), voltage_text, font=f_circ)[3] - draw.textbbox((0,0), voltage_text, font=f_circ)[1]
-        text_center_y = text_y + h_v / 2
-        v_gap = 8 
+        text_center_y = text_y + 4 + h_v / 2
+        v_gap = 6 
         dot_y_top = text_center_y - v_gap
         dot_y_bot = text_center_y + v_gap
-        dot_x_right = text_x + w_v + 12
-        dot_x_left = text_x - 12
+        dot_x_right = text_x + w_v + 6
+        dot_x_left = text_x - 6
         dot_r = 3
 
         def draw_side(side):
@@ -770,7 +770,7 @@ class LedImageGenerator:
                     # Вторая строка (3500K)
                     txt2 = f"{k2}K"
                     w2 = draw.textbbox((0,0), txt2, font=self.f_mid)[2]
-                    draw.text((x + (self.size - w2) / 2, y + 75), txt2, fill="black", font=self.f_mid)
+                    draw.text((x + (self.size - w2) - 50 / 2, y + 75), txt2, fill="black", font=self.f_mid)
                 elif kelvin:
                     # Если кельвин просто одним числом
                     w_k = draw.textbbox((0,0), kelvin, font=self.f_mid)[2]
