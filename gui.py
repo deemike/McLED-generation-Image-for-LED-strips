@@ -11,6 +11,7 @@ import random
 import config
 from scraper import fetch_data, get_driver
 from drawer import LedImageGenerator
+from pathlib import Path
 
 class LedApp(ctk.CTk):
     def __init__(self):
@@ -168,17 +169,27 @@ class LedApp(ctk.CTk):
 
     def run_generate(self):
         data = {k: v.get().strip() for k, v in self.entries.items()}
+        # Настройка путей
+        downloads_path = Path.home() / "Downloads"
+        target_dir = downloads_path / "McLED_LED-pasky"
+        
+        # Создаем папку, если ее нет
+        target_dir.mkdir(parents=True, exist_ok=True)
+
         try:
             img = self.generator.generate(data)
             sku = self.url_input.get().split('/')[-1].upper().replace('-', '.')
             filename = f"{sku}_30.jpg"
-            img.save(filename, "JPEG", quality=95)
+            
+            full_path = target_dir / filename
+            
+            img.save(str(full_path), "JPEG", quality=95)
             
             if os.name == 'nt':
-                os.startfile(filename)
+                os.startfile(str(full_path))
             else:
                 img.show()
-            self.show_status(f"Hotovo! Obrázek {filename} byl uložen", mode="success")
+            self.show_status(f"Hotovo! Uloženo v McLED_LED-pasky", mode="success")
         except Exception as e:
             self.show_status(f"Chyba při generování: {e}", mode="error")
 
@@ -260,24 +271,24 @@ class LedApp(ctk.CTk):
                     # 3. Stáhnout data
                     data = fetch_data(url, driver=driver)
                     
-                    # Pokud je slovník prázdný, znamená to, že se nepodařilo nic načíst (např. 404)
-                    if not data:
-                        print(f"Warning: No valid data found for {url}")
-                        # Zkusíme ještě jednou s delší pauzou
-                        time.sleep(4)
-                        data = fetch_data(url, driver=driver)
-                        
-                        if not data:
-                            errors.append(code)
-                            continue
+                    # Настройка путей для батча
+                    downloads_path = Path.home() / "Downloads"
+                    target_dir = downloads_path / "McLED_LED-pasky"
+                    target_dir.mkdir(parents=True, exist_ok=True)
 
-                    # 4. Generovat a uložit (i když chybí některé parametry)
+                    if not data:
+                        # ... (код обработки отсутствия данных)
+                        continue
+
+                    # 4. Generovat a uložit
                     try:
                         img = self.generator.generate(data)
                         clean_name = code.strip().replace('/', '-').replace('\\', '-')
                         filename = f"{clean_name}_30.jpg"
                         
-                        img.save(filename, "JPEG", quality=95)
+                        full_path = target_dir / filename
+
+                        img.save(str(full_path), "JPEG", quality=95)
                         success_count += 1
                     except Exception as gen_err:
                         print(f"Chyba při kreslení {code}: {gen_err}")
