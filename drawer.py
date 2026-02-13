@@ -5,7 +5,7 @@ import re
 import math
 
 class LedImageGenerator:
-    def __init__(self, width=1000, height=600):
+    def __init__(self, width=1000, height=450):
         self.width = width
         self.height = height
         self.size = 124
