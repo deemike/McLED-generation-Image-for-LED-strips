@@ -69,7 +69,7 @@ class LedImageGenerator:
                 if field == "color":
                     if "SPI" in val_up:
                         # Digital SPI logic - Gray background, add border
-                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
                         draw.text((curr_x + 12, curr_y + 15), "D", fill="#E30613", font=self.f_rgb_big)
                         draw.text((curr_x + 45, curr_y + 15), "I", fill="#D9005B", font=self.f_rgb_big)
                         draw.text((curr_x + 58, curr_y + 15), "G", fill="#662483", font=self.f_rgb_big)
@@ -123,7 +123,7 @@ class LedImageGenerator:
 
                 # Apply border if background is gray #EEEEEE
                 outline_color = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
-                outline_width = 1 if outline_color else 0
+                outline_width = 2 if outline_color else 0
                 
                 draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill=bg_color, outline=outline_color, width=outline_width)
                 self._draw_field_content(draw, field, val, curr_x, curr_y, txt_color, data, v_text_circuit)
@@ -166,7 +166,7 @@ class LedImageGenerator:
     def _draw_cri(self, draw, x, y):
         """Отрисовка CRI 90"""
         # Gray background -> add border
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
         
         # Super-sampling logic (same as before)
         upscale = 4
@@ -203,7 +203,7 @@ class LedImageGenerator:
     def _draw_angle(self, draw, x, y, angle_val):
         """Отрисовка угла"""
         # Gray background -> add border
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
         
         txt = f"{angle_val}°"
         font = self.f_cri_angle
@@ -288,7 +288,7 @@ class LedImageGenerator:
     def _draw_al_profile(self, draw, x, y):
         """Отрисовка иконки AL-Profil"""
         # Gray background -> add border
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
         
         txt = "AL-Profil"
         font = self.f_val
@@ -555,7 +555,7 @@ class LedImageGenerator:
     def _draw_life(self, canvas, main_draw, x, y, val, bg_color, data):
         # Gray background -> add border
         draw_outline = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
-        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=1)
+        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=2)
         
         oversample = 4
         temp_size = self.size * oversample
