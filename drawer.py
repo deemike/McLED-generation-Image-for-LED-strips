@@ -185,11 +185,10 @@ class LedImageGenerator:
             
             if icon_path:
                 with Image.open(icon_path) as icon:
-                    target_size = (self.size - 14, self.size - 14)
-                    icon.thumbnail(target_size, Image.Resampling.LANCZOS)
-                    
-                    paste_x = int(x + (self.size - icon.width) / 2)
-                    paste_y = int(y + (self.size - icon.height) / 2)
+                    target_size = (self.size, self.size) # New
+                    icon = icon.resize(target_size, Image.Resampling.LANCZOS) # Use resize to fill completely
+                    paste_x = int(x)
+                    paste_y = int(y)
                     
                     if icon.mode == 'RGBA':
                         draw._image.paste(icon, (paste_x, paste_y), icon)
@@ -661,10 +660,10 @@ class LedImageGenerator:
                 
                 if icon_path:
                     with Image.open(icon_path) as icon:
-                        target_size = (self.size - 20, self.size - 20)
-                        icon.thumbnail(target_size, Image.Resampling.LANCZOS)
-                        paste_x = int(x + (self.size - icon.width) / 2)
-                        paste_y = int(y + (self.size - icon.height) / 2)
+                        target_size = (self.size, self.size) # New
+                        icon = icon.resize(target_size, Image.Resampling.LANCZOS)
+                        paste_x = int(x)
+                        paste_y = int(y)
                         if icon.mode == 'RGBA':
                             draw._image.paste(icon, (paste_x, paste_y), icon)
                         else:
