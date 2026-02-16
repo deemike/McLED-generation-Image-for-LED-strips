@@ -676,21 +676,45 @@ class LedImageGenerator:
                 draw.text((x + 45, y + 20), "IP", fill=txt_color, font=self.f_val)
                 draw.text((x + 40, y + 65), val, fill=txt_color, font=self.f_val)
 
-        elif field in ["max_single", "max_double"]:
-            draw.text((x + 20, y + 15), "≤", fill="black", font=self.f_mid)
-            w_n = draw.textbbox((0,0), val, font=self.f_val)[2]
-            draw.text((x + 40, y + 10), val, fill="black", font=self.f_val) # top numbers
-            draw.text((x + 45 + w_n, y + 15), "m", fill="black", font=self.f_mid) # top numbers
-            line_y = y + 55
-            draw.line([x + 20, line_y - 5, x + 20, line_y + 5], fill="black", width=2)
-            draw.line([x + self.size - 20, line_y - 5, x + self.size - 20, line_y + 5], fill="black", width=2)
-            arrow_y = 55
-            draw.line([x + 20, y + arrow_y, x + self.size - 21, y + arrow_y], fill="black", width=2) 
-            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y - 3], fill="black", width=2) 
-            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y + 3], fill="black", width=2) 
-            draw.line([x + self.size - 20, y + arrow_y, x + self.size - 26, y + arrow_y - 3], fill="black", width=1)
-            draw.line([x + self.size - 20, y + arrow_y, x + self.size - 26, y + arrow_y + 3], fill="black", width=1)
-            self.draw_circuit(draw, x, y, self.size, "single" if field == "max_single" else "double", v_text)
+                elif field in ["max_single", "max_double"]:
+            # 1. Загрузка иконки (max-single.png или max-double.png)
+            icon_name = field.replace("_", "-") 
+            icon_path = self._find_image_path(icon_name)
+            
+            if icon_path:
+                try:
+                    with Image.open(icon_path) as icon:
+                        # Растягиваем на весь квадрат (124x124)
+                        icon = icon.resize((self.size, self.size), Image.Resampling.LANCZOS)
+                        
+                        # Вставляем на координаты x, y
+                        if icon.mode == 'RGBA':
+                            draw._image.paste(icon, (int(x), int(y)), icon)
+                        else:
+                            draw._image.paste(icon, (int(x), int(y)))
+                except Exception as e:
+                    print(f"Error loading {icon_name}: {e}")
+
+            # 2. Отрисовка текста "≤ {val} m" поверх иконки
+            # Вычисляем ширину всех частей текста для центрирования
+            w_le = draw.textbbox((0,0), "≤", font=self.f_mid)[2]
+            w_val = draw.textbbox((0,0), val, font=self.f_val)[2]
+            w_m = draw.textbbox((0,0), " m", font=self.f_mid)[2]
+            
+            total_w = w_le + w_val + w_m
+            
+            # Координаты начала текста (по центру горизонтали)
+            start_text_x = x + (self.size - total_w) / 2
+            text_y = y + 15 # Отступ сверху
+            
+            # Рисуем части текста
+            # Символ "≤" (шрифт поменьше, чуть сдвигаем вниз +4px для выравнивания)
+            draw.text((start_text_x, text_y + 4), "≤", fill="black", font=self.f_mid)
+            # Значение (шрифт жирный)
+            draw.text((start_text_x + w_le, text_y), val, fill="black", font=self.f_val)
+            # Символ "m"
+            draw.text((start_text_x + w_le + w_val, text_y + 4), " m", fill="black", font=self.f_mid)
+
         elif field == "cut":
             led_val = str(full_data.get("led_segment", "")).strip()
             if not led_val or led_val == "0":
