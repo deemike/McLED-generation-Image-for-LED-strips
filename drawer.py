@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import config
 import re
 import math
+import os
 
 class LedImageGenerator:
     def __init__(self, width=1000, height=450):
@@ -23,12 +24,26 @@ class LedImageGenerator:
             self.f_mid = ImageFont.truetype(config.FONT_REGULAR, 26)
             self.f_sub = ImageFont.truetype(config.FONT_REGULAR, 16)
             self.f_cut_num = ImageFont.truetype(config.FONT_BOLD, 26)
-            # Специальный крупный шрифт для CRI и Angle
             self.f_cri_angle = ImageFont.truetype(config.FONT_BOLD, 26)
         except:
             self.f_val = self.f_mid = self.f_sub = self.f_cut_num = \
             self.f_rgb_small = self.f_rgb_big = self.f_dual_top = \
             self.f_dual_bot = self.f_cri_angle = ImageFont.load_default()
+
+    def _find_image_path(self, base_name):
+        """Helper to find image path case-insensitively and with different extensions"""
+        base_dir = "images"
+        if not os.path.exists(base_dir):
+            return None
+            
+        target_name = base_name.lower()
+        for f in os.listdir(base_dir):
+            if f.lower().startswith(target_name):
+                # Check for exact match of name part (ignoring extension)
+                name_part = os.path.splitext(f)[0]
+                if name_part.lower() == target_name:
+                    return os.path.join(base_dir, f)
+        return None
 
     def generate(self, data):
         has_dynamic = data.get("cri") == "90" or data.get("angle")
@@ -41,12 +56,8 @@ class LedImageGenerator:
             ["ip", "voltage", "cut", "max_single", "max_double", "life"]
         ]
         
-        # --- РАСЧЕТ ЦЕНТРИРОВАНИЯ ---
-        # Считаем общую ширину контента: 6 колонок * ширину + 5 отступов
         num_cols = 6
         content_width = (num_cols * self.size) + ((num_cols - 1) * self.gap)
-        
-        # Вычисляем начальную точку X, чтобы отступы слева и справа были равны
         x_start = (self.width - content_width) // 2
         y_start = 64
 
@@ -68,8 +79,7 @@ class LedImageGenerator:
 
                 if field == "color":
                     if "SPI" in val_up:
-                        # Digital SPI logic - Gray background, add border
-                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
+                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
                         draw.text((curr_x + 12, curr_y + 15), "D", fill="#E30613", font=self.f_rgb_big)
                         draw.text((curr_x + 45, curr_y + 15), "I", fill="#D9005B", font=self.f_rgb_big)
                         draw.text((curr_x + 58, curr_y + 15), "G", fill="#662483", font=self.f_rgb_big)
@@ -88,7 +98,6 @@ class LedImageGenerator:
                         continue
 
                     if "UVA" in val_up or "UV" in val_up:
-                        # UV - Purple background, no border needed as it is not gray
                         draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#531E54")
                         tw = draw.textbbox((0,0), "UV", font=self.f_rgb_big)[2]
                         draw.text((curr_x + (self.size-tw)/2, curr_y + 35), "UV", fill="white", font=self.f_rgb_big)
@@ -104,7 +113,6 @@ class LedImageGenerator:
                         continue
 
                 if field == "life":
-                    # Life block is usually gray
                     self._draw_life(canvas, draw, curr_x, curr_y, val, bg_color, data)
                     continue
 
@@ -121,19 +129,16 @@ class LedImageGenerator:
                     if "24" in val: txt_color = config.COLOR_MAP_VOLTAGE["24"]
                     elif "12" in val: txt_color = config.COLOR_MAP_VOLTAGE["12"]
 
-                # Apply border if background is gray #EEEEEE
                 outline_color = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
-                outline_width = 2 if outline_color else 0
+                outline_width = 1 if outline_color else 0
                 
                 draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill=bg_color, outline=outline_color, width=outline_width)
                 self._draw_field_content(draw, field, val, curr_x, curr_y, txt_color, data, v_text_circuit)
 
         extra_fields = []
-        # 1. Логика CRI
         if data.get("cri") == "90": extra_fields.append("cri")
         
-        # 2. Логика AL-Profil (Мощность >= 28.8)
-        power_str = data.get("power", "0").replace(",", ".") # Меняем запятую на точку
+        power_str = data.get("power", "0").replace(",", ".")
         try:
             power_val = float(power_str)
         except ValueError:
@@ -142,7 +147,6 @@ class LedImageGenerator:
         if power_val >= 28.8:
             extra_fields.append("al_profile")
 
-        # 3. Логика Угла
         if data.get("angle"): extra_fields.append("angle")
 
         for idx, field in enumerate(extra_fields):
@@ -156,54 +160,44 @@ class LedImageGenerator:
             elif field == "al_profile":
                 self._draw_al_profile(draw, curr_x, curr_y)
 
-        # Отрисовка увеличенной схемы внизу справа
         self._draw_large_scheme(canvas, data)
 
         return canvas
 
-    # --- МЕТОДЫ ОТРИСОВКИ С ВЫСОКИМ КАЧЕСТВОМ (Super-sampling) ---
-
     def _draw_cri(self, draw, x, y):
-        """Отрисовка CRI 90"""
-        # Gray background -> add border
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
+        """Отрисовка CRI 90 с использованием иконки"""
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
         
-        # Super-sampling logic (same as before)
-        upscale = 4
-        temp_size = self.size * upscale
-        temp_img = Image.new('RGBA', (temp_size, temp_size), (0, 0, 0, 0))
-        temp_draw = ImageDraw.Draw(temp_img)
-        
-        cx, cy = temp_size / 2, temp_size / 2
-        r_outer = 56 * upscale
-        r_inner = 38 * upscale
-        num_points = 12
-        
-        points = []
-        for i in range(num_points * 2):
-            angle = math.radians(i * (360 / (num_points * 2)) - 90)
-            r = r_outer if i % 2 == 0 else r_inner
-            points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
+        icon_loaded = False
+        try:
+            icon_path = self._find_image_path("CRI_90")
             
-        temp_draw.polygon(points, fill="#FFF200", outline="#FFA500")
-        temp_draw.line(points + [points[0]], fill="#FFA500", width=2 * upscale)
-        
-        temp_img = temp_img.resize((self.size, self.size), Image.Resampling.LANCZOS)
-        
-        # Paste
-        canvas_ref = draw._image 
-        canvas_ref.paste(temp_img, (int(x), int(y)), temp_img)
-        
-        font = self.f_cri_angle
-        tw_cri = draw.textbbox((0,0), "CRI", font=font)[2]
-        tw_90 = draw.textbbox((0,0), "90", font=font)[2]
-        draw.text((x + (self.size - tw_cri) / 2, y + 28), "CRI", fill="black", font=font)
-        draw.text((x + (self.size - tw_90) / 2, y + 68), "90", fill="black", font=font)
+            if icon_path:
+                with Image.open(icon_path) as icon:
+                    target_size = (self.size - 14, self.size - 14)
+                    icon.thumbnail(target_size, Image.Resampling.LANCZOS)
+                    
+                    paste_x = int(x + (self.size - icon.width) / 2)
+                    paste_y = int(y + (self.size - icon.height) / 2)
+                    
+                    if icon.mode == 'RGBA':
+                        draw._image.paste(icon, (paste_x, paste_y), icon)
+                    else:
+                        draw._image.paste(icon, (paste_x, paste_y))
+                    icon_loaded = True
+        except Exception as e:
+            print(f"Ошибка при загрузке иконки CRI: {e}")
+
+        # Fallback
+        if not icon_loaded:
+            font = self.f_cri_angle
+            tw_cri = draw.textbbox((0,0), "CRI", font=font)[2]
+            draw.text((x + (self.size - tw_cri) / 2, y + 28), "CRI", fill="black", font=font)
+            draw.text((x + (self.size - tw_90) / 2, y + 68), "90", fill="black", font=font)
 
     def _draw_angle(self, draw, x, y, angle_val):
         """Отрисовка угла"""
-        # Gray background -> add border
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
         
         txt = f"{angle_val}°"
         font = self.f_cri_angle
@@ -287,8 +281,7 @@ class LedImageGenerator:
 
     def _draw_al_profile(self, draw, x, y):
         """Отрисовка иконки AL-Profil"""
-        # Gray background -> add border
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
         
         txt = "AL-Profil"
         font = self.f_val
@@ -555,7 +548,7 @@ class LedImageGenerator:
     def _draw_life(self, canvas, main_draw, x, y, val, bg_color, data):
         # Gray background -> add border
         draw_outline = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
-        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=2)
+        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=1)
         
         oversample = 4
         temp_size = self.size * oversample
@@ -651,8 +644,28 @@ class LedImageGenerator:
             draw.text((x + 35, y + 20), f"{num_v}V", fill=txt_color, font=self.f_val)
             draw.text((x + 40, y + 65), "DC", fill=txt_color, font=self.f_val)
         elif field == "ip":
-            draw.text((x + 45, y + 20), "IP", fill=txt_color, font=self.f_val)
-            draw.text((x + 40, y + 65), val, fill=txt_color, font=self.f_val)
+            icon_loaded = False
+            try:
+                icon_path = self._find_image_path(f"IP_{val}")
+                
+                if icon_path:
+                    with Image.open(icon_path) as icon:
+                        target_size = (self.size - 20, self.size - 20)
+                        icon.thumbnail(target_size, Image.Resampling.LANCZOS)
+                        paste_x = int(x + (self.size - icon.width) / 2)
+                        paste_y = int(y + (self.size - icon.height) / 2)
+                        if icon.mode == 'RGBA':
+                            draw._image.paste(icon, (paste_x, paste_y), icon)
+                        else:
+                            draw._image.paste(icon, (paste_x, paste_y))
+                        icon_loaded = True
+            except Exception as e:
+                print(f"Error loading IP icon: {e}")
+
+            if not icon_loaded:
+                draw.text((x + 45, y + 20), "IP", fill=txt_color, font=self.f_val)
+                draw.text((x + 40, y + 65), val, fill=txt_color, font=self.f_val)
+
         elif field in ["max_single", "max_double"]:
             draw.text((x + 20, y + 15), "≤", fill="black", font=self.f_mid)
             w_n = draw.textbbox((0,0), val, font=self.f_val)[2]
