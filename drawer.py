@@ -185,10 +185,11 @@ class LedImageGenerator:
             
             if icon_path:
                 with Image.open(icon_path) as icon:
-                    target_size = (self.size, self.size) # New
-                    icon = icon.resize(target_size, Image.Resampling.LANCZOS) # Use resize to fill completely
-                    paste_x = int(x)
-                    paste_y = int(y)
+                    target_size = (self.size - 14, self.size - 14)
+                    icon.thumbnail(target_size, Image.Resampling.LANCZOS)
+                    
+                    paste_x = int(x + (self.size - icon.width) / 2)
+                    paste_y = int(y + (self.size - icon.height) / 2)
                     
                     if icon.mode == 'RGBA':
                         draw._image.paste(icon, (paste_x, paste_y), icon)
@@ -708,12 +709,20 @@ class LedImageGenerator:
             text_y = y + 15 # Отступ сверху
             
             # Рисуем части текста
-            # Символ "≤" (шрифт поменьше, чуть сдвигаем вниз +4px для выравнивания)
+            # Символ "≤"
             draw.text((start_text_x, text_y + 4), "≤", fill="black", font=self.f_mid)
-            # Значение (шрифт жирный)
+            # Значение
             draw.text((start_text_x + w_le, text_y), val, fill="black", font=self.f_val)
             # Символ "m"
             draw.text((start_text_x + w_le + w_val, text_y + 4), " m", fill="black", font=self.f_mid)
+
+            # 3. Отрисовка текста напряжения (V DC) внизу
+            # v_text содержит строку, например "24 V DC"
+            w_volt = draw.textbbox((0,0), v_text, font=self.f_mid)[2]
+            start_volt_x = x + (self.size - w_volt) / 2
+            volt_y = y + 85 # Отступ для нижней части
+            
+            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_mid)
 
         elif field == "cut":
             led_val = str(full_data.get("led_segment", "")).strip()
