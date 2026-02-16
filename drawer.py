@@ -5,7 +5,7 @@ import re
 import math
 
 class LedImageGenerator:
-    def __init__(self, width=1000, height=600):
+    def __init__(self, width=1000, height=450):
         self.width = width
         self.height = height
         self.size = 124
@@ -248,35 +248,35 @@ class LedImageGenerator:
         canvas.paste(temp_sq, (int(x), int(y)), mask)
 
     def draw_circuit(self, draw, x, y, size, mode, voltage_text):
-        rect_x1, rect_y1 = x + 20, y + 50
-        rect_x2, rect_y2 = x + size - 20, y + 65
+        rect_x1, rect_y1 = x + 19, y + 63
+        rect_x2, rect_y2 = x + size - 19, y + 78
         draw.rectangle([rect_x1, rect_y1, rect_x2, rect_y2], outline="black", width=2)
         for i in range(6): 
-            dot_x = rect_x1 + 5 + i * 13
-            draw.rectangle([dot_x, rect_y1 + 4, dot_x + 4, rect_y1 + 8], fill="black")
+            dot_x = rect_x1 + 8 + i * 13
+            draw.rectangle([dot_x, rect_y1 + 5, dot_x + 4, rect_y1 + 10], fill="black")
 
         try: f_circ = ImageFont.truetype(config.FONT_REGULAR, 18)
         except: f_circ = ImageFont.load_default()
             
         w_v = draw.textbbox((0,0), voltage_text, font=f_circ)[2]
         text_x = x + (size - w_v) / 2
-        text_y = y + 80
+        text_y = y + 90 # Bottom numbers
         draw.text((text_x, text_y), voltage_text, fill="black", font=f_circ)
 
         h_v = draw.textbbox((0,0), voltage_text, font=f_circ)[3] - draw.textbbox((0,0), voltage_text, font=f_circ)[1]
         text_center_y = text_y + 4 + h_v / 2
-        v_gap = 6 
+        v_gap = 4 
         dot_y_top = text_center_y - v_gap
         dot_y_bot = text_center_y + v_gap
         dot_x_right = text_x + w_v + 6
         dot_x_left = text_x - 6
-        dot_r = 3
+        dot_r = 2
 
         def draw_side(side):
             start_x = rect_x1 if side == "left" else rect_x2
             target_dot_x = dot_x_left if side == "left" else dot_x_right
-            if side == "right": elbow_x_outer, elbow_x_inner = start_x + 15, start_x + 8
-            else: elbow_x_outer, elbow_x_inner = start_x - 15, start_x - 8
+            if side == "right": elbow_x_outer, elbow_x_inner = start_x + 14, start_x + 8
+            else: elbow_x_outer, elbow_x_inner = start_x - 14, start_x - 8
 
             draw.line([start_x, rect_y1 + 4, elbow_x_outer, rect_y1 + 4], fill="black", width=1)
             draw.line([elbow_x_outer, rect_y1 + 4, elbow_x_outer, dot_y_bot], fill="black", width=1)
@@ -569,7 +569,7 @@ class LedImageGenerator:
         # --- РАЗМЕРНЫЕ ЛИНИИ И СТРЕЛКИ ---
         draw_line_w = max(1, s // 2)
         
-        # 1. ШИРИНА (Горизонтальная)
+        # 1. ШИРИНА
         width_y = base_y + 45 * s
         x_left, x_right = cx - w_rect, cx + w_rect
         
@@ -582,7 +582,7 @@ class LedImageGenerator:
         td.polygon([(x_left, width_y), (x_left + 6*s, width_y - 3*s), (x_left + 6*s, width_y + 3*s)], fill="black")
         td.polygon([(x_right, width_y), (x_right - 6*s, width_y - 3*s), (x_right - 6*s, width_y + 3*s)], fill="black")
 
-        # 2. ВЫСОТА (Вертикальная)
+        # 2. ВЫСОТА
         # Определяем верхнюю точку корпуса
         if p_type == "ip68": top_y = base_y - 18 * upscale
         elif p_type in ["ip67", "ip54_vlhke"]: top_y = base_y - 22 * upscale
@@ -795,17 +795,17 @@ class LedImageGenerator:
         elif field in ["max_single", "max_double"]:
             draw.text((x + 20, y + 15), "≤", fill="black", font=self.f_mid)
             w_n = draw.textbbox((0,0), val, font=self.f_val)[2]
-            draw.text((x + 40, y + 10), val, fill="black", font=self.f_val)
-            draw.text((x + 45 + w_n, y + 15), "m", fill="black", font=self.f_mid)
-            line_y = y + 45
-            draw.line([x + 20, line_y - 5, x + 20, line_y + 5], fill="black", width=1)
-            draw.line([x + self.size - 20, line_y - 5, x + self.size - 20, line_y + 5], fill="black", width=1)
-            arrow_y = 45
-            draw.line([x + 20, y + arrow_y, x + self.size - 20, y + arrow_y], fill="black", width=1)
-            draw.line([x + 20, y + arrow_y, x + 25, y + arrow_y - 3], fill="black", width=1)
-            draw.line([x + 20, y + arrow_y, x + 25, y + arrow_y + 3], fill="black", width=1)
-            draw.line([x + self.size - 20, y + arrow_y, x + self.size - 25, y + arrow_y - 3], fill="black", width=1)
-            draw.line([x + self.size - 20, y + arrow_y, x + self.size - 25, y + arrow_y + 3], fill="black", width=1)
+            draw.text((x + 40, y + 10), val, fill="black", font=self.f_val) # top numbers
+            draw.text((x + 45 + w_n, y + 15), "m", fill="black", font=self.f_mid) # top numbers
+            line_y = y + 55
+            draw.line([x + 20, line_y - 5, x + 20, line_y + 5], fill="black", width=2)
+            draw.line([x + self.size - 20, line_y - 5, x + self.size - 20, line_y + 5], fill="black", width=2)
+            arrow_y = 55
+            draw.line([x + 20, y + arrow_y, x + self.size - 21, y + arrow_y], fill="black", width=2) # horizontal line with arrows
+            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y - 3], fill="black", width=2) #arrow top side
+            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y + 3], fill="black", width=2) #arrow bottom side
+            draw.line([x + self.size - 20, y + arrow_y, x + self.size - 26, y + arrow_y - 3], fill="black", width=1)
+            draw.line([x + self.size - 20, y + arrow_y, x + self.size - 26, y + arrow_y + 3], fill="black", width=1)
             self.draw_circuit(draw, x, y, self.size, "single" if field == "max_single" else "double", v_text)
         elif field == "cut":
             # 1. Сначала ищем в стандартных полях
@@ -823,7 +823,6 @@ class LedImageGenerator:
             # Очистка на случай, если пришло что-то странное
             led_val = "".join(filter(str.isdigit, led_val)) if led_val else "0"
 
-            # 3. ОТРИСОВКА (Ваша структура с исправленными координатами)
             # Верхняя часть: Число + LED
             w_l = draw.textbbox((0,0), led_val, font=self.f_cut_num)[2]
             draw.text((x + 35 - w_l/2, y + 15), led_val, fill="black", font=self.f_cut_num)
