@@ -32,17 +32,28 @@ class LedImageGenerator:
 
     def _find_image_path(self, base_name):
         """Helper to find image path case-insensitively and with different extensions"""
-        base_dir = "images"
+        # Použijeme absolutní cestu k adresáři skriptu, abychom našli složku images spolehlivě
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.join(script_dir, "images")
+        
+        # print(f"DEBUG: Hledám obrázek '{base_name}' ve složce: {base_dir}") # DEBUG
+        
         if not os.path.exists(base_dir):
+            print(f"ERROR: Složka s obrázky neexistuje: {base_dir}")
             return None
             
         target_name = base_name.lower()
+        
+        # Projdeme soubory ve složce
         for f in os.listdir(base_dir):
-            if f.lower().startswith(target_name):
-                # Check for exact match of name part (ignoring extension)
-                name_part = os.path.splitext(f)[0]
-                if name_part.lower() == target_name:
-                    return os.path.join(base_dir, f)
+            # Porovnáváme název souboru bez přípony
+            name_part = os.path.splitext(f)[0]
+            if name_part.lower() == target_name:
+                full_path = os.path.join(base_dir, f)
+                # print(f"DEBUG: Nalezen obrázek: {full_path}") # DEBUG
+                return full_path
+                
+        print(f"WARNING: Obrázek '{base_name}' nebyl nalezen ve složce images.")
         return None
 
     def generate(self, data):
