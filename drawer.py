@@ -676,7 +676,7 @@ class LedImageGenerator:
                 draw.text((x + 45, y + 20), "IP", fill=txt_color, font=self.f_val)
                 draw.text((x + 40, y + 65), val, fill=txt_color, font=self.f_val)
 
-                elif field in ["max_single", "max_double"]:
+        elif field in ["max_single", "max_double"]:
             # 1. Загрузка иконки (max-single.png или max-double.png)
             icon_name = field.replace("_", "-") 
             icon_path = self._find_image_path(icon_name)
