@@ -68,8 +68,8 @@ class LedImageGenerator:
 
                 if field == "color":
                     if "SPI" in val_up:
-                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE")
-                        # Digital SPI logic
+                        # Digital SPI logic - Gray background, add border
+                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
                         draw.text((curr_x + 12, curr_y + 15), "D", fill="#E30613", font=self.f_rgb_big)
                         draw.text((curr_x + 45, curr_y + 15), "I", fill="#D9005B", font=self.f_rgb_big)
                         draw.text((curr_x + 58, curr_y + 15), "G", fill="#662483", font=self.f_rgb_big)
@@ -88,6 +88,7 @@ class LedImageGenerator:
                         continue
 
                     if "UVA" in val_up or "UV" in val_up:
+                        # UV - Purple background, no border needed as it is not gray
                         draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#531E54")
                         tw = draw.textbbox((0,0), "UV", font=self.f_rgb_big)[2]
                         draw.text((curr_x + (self.size-tw)/2, curr_y + 35), "UV", fill="white", font=self.f_rgb_big)
@@ -103,6 +104,7 @@ class LedImageGenerator:
                         continue
 
                 if field == "life":
+                    # Life block is usually gray
                     self._draw_life(canvas, draw, curr_x, curr_y, val, bg_color, data)
                     continue
 
@@ -119,7 +121,11 @@ class LedImageGenerator:
                     if "24" in val: txt_color = config.COLOR_MAP_VOLTAGE["24"]
                     elif "12" in val: txt_color = config.COLOR_MAP_VOLTAGE["12"]
 
-                draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill=bg_color)
+                # Apply border if background is gray #EEEEEE
+                outline_color = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
+                outline_width = 2 if outline_color else 0
+                
+                draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill=bg_color, outline=outline_color, width=outline_width)
                 self._draw_field_content(draw, field, val, curr_x, curr_y, txt_color, data, v_text_circuit)
 
         extra_fields = []
@@ -147,7 +153,6 @@ class LedImageGenerator:
                 self._draw_cri(draw, curr_x, curr_y)
             elif field == "angle":
                 self._draw_angle(draw, curr_x, curr_y, data.get("angle"))
-            # ДОБАВЛЯЕМ ЭТУ СТРОКУ:
             elif field == "al_profile":
                 self._draw_al_profile(draw, curr_x, curr_y)
 
@@ -159,14 +164,16 @@ class LedImageGenerator:
     # --- МЕТОДЫ ОТРИСОВКИ С ВЫСОКИМ КАЧЕСТВОМ (Super-sampling) ---
 
     def _draw_cri(self, draw, x, y):
-        """Отрисовка CRI 90: Желтая звезда через суперсэмплинг для идеальной гладкости"""
-        # 1. Создаем временное изображение в 4 раза больше целевого размера
+        """Отрисовка CRI 90"""
+        # Gray background -> add border
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
+        
+        # Super-sampling logic (same as before)
         upscale = 4
         temp_size = self.size * upscale
         temp_img = Image.new('RGBA', (temp_size, temp_size), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
         
-        # Центр и радиусы во вспомогательном пространстве
         cx, cy = temp_size / 2, temp_size / 2
         r_outer = 56 * upscale
         r_inner = 38 * upscale
@@ -178,40 +185,31 @@ class LedImageGenerator:
             r = r_outer if i % 2 == 0 else r_inner
             points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
             
-        # Рисуем звезду
         temp_draw.polygon(points, fill="#FFF200", outline="#FFA500")
         temp_draw.line(points + [points[0]], fill="#FFA500", width=2 * upscale)
         
-        # 2. Уменьшаем изображение с качественным сглаживанием
         temp_img = temp_img.resize((self.size, self.size), Image.Resampling.LANCZOS)
         
-        # 3. Рисуем фон и накладываем звезду
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE")
-        
-        # Накладываем через доступ к основному изображению
+        # Paste
         canvas_ref = draw._image 
         canvas_ref.paste(temp_img, (int(x), int(y)), temp_img)
         
-        # 4. Текст рисуем поверх (шрифты в Pillow и так имеют сглаживание)
         font = self.f_cri_angle
         tw_cri = draw.textbbox((0,0), "CRI", font=font)[2]
         tw_90 = draw.textbbox((0,0), "90", font=font)[2]
-        
-        # Текст позиционируется относительно оригинальных координат x, y
         draw.text((x + (self.size - tw_cri) / 2, y + 28), "CRI", fill="black", font=font)
         draw.text((x + (self.size - tw_90) / 2, y + 68), "90", fill="black", font=font)
 
     def _draw_angle(self, draw, x, y, angle_val):
-        """Отрисовка угла: Тонкие линии без лесенки через суперсэмплинг"""
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE")
+        """Отрисовка угла"""
+        # Gray background -> add border
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
         
-        # Текст
         txt = f"{angle_val}°"
         font = self.f_cri_angle
         tw = draw.textbbox((0,0), txt, font=font)[2]
         draw.text((x + (self.size-tw)/2, y + 15), txt, fill="black", font=font)
         
-        # Пиктограмма через суперсэмплинг
         upscale = 4
         temp_size = self.size * upscale
         temp_img = Image.new('RGBA', (temp_size, temp_size), (0, 0, 0, 0))
@@ -222,7 +220,6 @@ class LedImageGenerator:
         angle_spread_rad = math.radians(40) 
         line_w = 2 * upscale
         
-        # Левая и правая линии
         lx = cx - line_len * math.sin(angle_spread_rad)
         ly = cy - line_len * math.cos(angle_spread_rad)
         rx = cx + line_len * math.sin(angle_spread_rad)
@@ -231,16 +228,13 @@ class LedImageGenerator:
         t_draw.line([cx, cy, lx, ly], fill="black", width=line_w)
         t_draw.line([cx, cy, rx, ry], fill="black", width=line_w)
         
-        # Дуга
         arc_r = 45 * upscale
         t_draw.arc([cx-arc_r, cy-arc_r, cx+arc_r, cy+arc_r], start=235, end=305, fill="black", width=line_w)
         
-        # Ресайз и вставка
         temp_img = temp_img.resize((self.size, self.size), Image.Resampling.LANCZOS)
         canvas_ref = draw._image
         canvas_ref.paste(temp_img, (int(x), int(y)), temp_img)
 
-    # --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ (Без изменений логики, но с новыми координатами) ---
     def _apply_rounded_mask(self, canvas, temp_sq, x, y):
         mask = Image.new('L', (self.size, self.size), 0)
         m_draw = ImageDraw.Draw(mask)
@@ -260,7 +254,7 @@ class LedImageGenerator:
             
         w_v = draw.textbbox((0,0), voltage_text, font=f_circ)[2]
         text_x = x + (size - w_v) / 2
-        text_y = y + 90 # Bottom numbers
+        text_y = y + 90
         draw.text((text_x, text_y), voltage_text, fill="black", font=f_circ)
 
         h_v = draw.textbbox((0,0), voltage_text, font=f_circ)[3] - draw.textbbox((0,0), voltage_text, font=f_circ)[1]
@@ -292,11 +286,10 @@ class LedImageGenerator:
         if mode == "double": draw_side("left")
 
     def _draw_al_profile(self, draw, x, y):
-        """Отрисовка иконки AL-Profil (4 ребра, сглаженные углы)"""
-        # Фон кнопки
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE")
+        """Отрисовка иконки AL-Profil"""
+        # Gray background -> add border
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=2)
         
-        # Текст
         txt = "AL-Profil"
         font = self.f_val
         if draw.textbbox((0,0), txt, font=font)[2] > self.size - 10:
@@ -304,8 +297,6 @@ class LedImageGenerator:
         tw = draw.textbbox((0,0), txt, font=font)[2]
         draw.text((x + (self.size - tw) / 2, y + 10), txt, fill="black", font=font)
 
-        # --- РИСУЕМ ПРОФИЛЬ (High Resolution) ---
-        # Увеличиваем разрешение в 8 раз для идеального скругления линий
         upscale = 8
         ts = self.size * upscale
         timg = Image.new('RGBA', (ts, ts), (0, 0, 0, 0))
@@ -313,154 +304,76 @@ class LedImageGenerator:
         
         cx = ts // 2
         cy = ts // 2 + 6 * upscale
-        
-        # --- ГЕОМЕТРИЯ ПРОФИЛЯ ---
-        # Размеры
-        w_inner = 70 * upscale      # Ширина внутреннего канала
-        h_wall = 31 * upscale       # Высота вертикальной стенки
-        base_y = cy + 10 * upscale  # Нижняя точка профиля
-        top_y = base_y - h_wall     # Верхняя точка
-        wall_thick = 4 * upscale # Толщина металла (визуальная)
-        fin_len = 8 * upscale      # Вылет ребра вбок
-        fin_h = 4 * upscale         # Толщина кончика ребра
-        # Расстояние между ребрами по вертикали (шаг)
-        # У нас 3 ребра на стене + 1 нижнее (основание)
-        # Делим высоту стены на секции
-        
-        rib_step = 9 * upscale      # Шаг между началами ребер
-        
-        # Толщина линии контура (она же задает радиус скругления)
+        w_inner = 70 * upscale
+        h_wall = 31 * upscale
+        base_y = cy + 10 * upscale
+        top_y = base_y - h_wall
+        wall_thick = 4 * upscale
+        fin_len = 8 * upscale
+        fin_h = 4 * upscale
+        rib_step = 9 * upscale
         line_w = 1 * upscale 
 
-        # Координаты для построения контура одной линией
         points = []
-
-        # 1. Левая сторона (Ребра)
-        # Начинаем с верхнего левого ребра (кончик)
-        # Идем сверху вниз 
-        # x координаты стены и кончиков ребер
         x_wall_left = cx - w_inner // 2 - line_w // 2 - wall_thick
         x_fin_left = x_wall_left - fin_len
-        
-        # Рисуем 3 верхних ребра слева
         for i in range(3):
             ry = top_y + (i * rib_step)
-            # Кончик ребра
             points.append((x_fin_left, ry))
             points.append((x_fin_left, ry + fin_h))
-            # Впадина у стены
             points.append((x_wall_left, ry + fin_h))
-            points.append((x_wall_left, ry + rib_step)) # Вниз до следующего
+            points.append((x_wall_left, ry + rib_step))
             
-        # 2. Четвертое ребро слева (Нижнее, выходит из основания)
-        # Оно находится на уровне base_y
-        points.append((x_fin_left, base_y - fin_h)) # Выступ влево
+        points.append((x_fin_left, base_y - fin_h))
         points.append((x_fin_left, base_y + fin_h))
-        points.append((x_wall_left, base_y + wall_thick)) # Возврат к стене
-
-        # 3. Дно (плоское)
-        # Идем вправо до правой стены
+        points.append((x_wall_left, base_y + wall_thick))
         x_wall_right = cx + w_inner // 2 + line_w // 2 + wall_thick
         points.append((x_wall_right, base_y + wall_thick))
-
-        # 4. Правая сторона (Ребра снизу вверх)
         x_fin_right = x_wall_right + fin_len
-        
-        # Нижнее (четвертое) ребро справа
         points.append((x_fin_right, base_y + fin_h))
         points.append((x_fin_right, base_y - fin_h))
-        points.append((x_wall_right, base_y - wall_thick)) # К стене
-        
-        # Остальные 3 ребра справа (снизу вверх)
-        # Логика обратная левой стороне
+        points.append((x_wall_right, base_y - wall_thick))
         for i in range(2, -1, -1):
             ry = top_y + (i * rib_step)
-            # Поднимаемся по стене до низа ребра
-            points.append((x_wall_right, ry + fin_h + (rib_step - fin_h))) # Точка во впадине
-            points.append((x_wall_right, ry + fin_h)) # Точка начала ребра у стены
-            # Кончик ребра
+            points.append((x_wall_right, ry + fin_h + (rib_step - fin_h)))
+            points.append((x_wall_right, ry + fin_h))
             points.append((x_fin_right, ry + fin_h))
             points.append((x_fin_right, ry))
-            
-        # Заканчиваем на верхней точке правой стены (внутренний угол)
         points.append((x_wall_right, top_y))
-
-        # 5. Внутренняя часть (П-образная чаша)
-        # Мы сейчас на верху внешней правой стены. Ныряем внутрь.
-        points.append((cx + w_inner // 2, top_y)) # Внутренний правый верх
-        points.append((cx + w_inner // 2, base_y - line_w)) # Внутренний правый низ
-        points.append((cx - w_inner // 2, base_y - line_w)) # Внутренний левый низ
-        points.append((cx - w_inner // 2, top_y)) # Внутренний левый верх
-        
-        # Замыкаем контур (соединяем с началом левого верхнего ребра)
+        points.append((cx + w_inner // 2, top_y))
+        points.append((cx + w_inner // 2, base_y - line_w))
+        points.append((cx - w_inner // 2, base_y - line_w))
+        points.append((cx - w_inner // 2, top_y))
         points.append((x_wall_left, top_y))
-        points.append((x_fin_left, top_y)) # Замыкаем в точку старта
+        points.append((x_fin_left, top_y))
 
-        # --- ОТРИСОВКА КОНТУРА ---
-        # joint="curve" делает все углы скругленными
         td.line(points, fill="black", width=line_w, joint="curve")
-
-        # --- ЧИП ВНУТРИ ---
         td.rectangle([cx-32*upscale, base_y-9*upscale, cx+32*upscale, base_y-3*upscale], outline="black", fill="#989898", width=1*upscale)
-        # Чип (квадратик)
         td.rectangle([cx-8*upscale, base_y-18*upscale, cx+8*upscale, base_y-8*upscale], outline="black", width=1*upscale)
 
-
-        # --- ВОЛНИСТЫЕ СТРЕЛКИ (Снизу) ---
         arrow_y_start = base_y + 8 * upscale
-        
-        # --- ВОЛНИСТЫЕ СТРЕЛКИ (Снизу) ---
-        arrow_y_start = base_y + 8 * upscale
-        
         def draw_wavy_arrow(ax, ay, angle_deg=0):
             import math
-            # 1. Параметры изгиба S-линии
-            # ax, ay — это точка начала (верх хвоста стрелки)
             arc_size = 10 * upscale
             line_w = 1 * upscale
-            
-            # Рисуем S-образную линию
-            # Верхняя дуга
             td.arc([ax, ay - 52, ax + arc_size, ay + 88], 330, 66, fill="black", width=line_w)
-            # Нижняя дуга (зеркальная)
             td.arc([ax + 4, ay + arc_size, ax + 98, ay + 3 * arc_size], 120, -87, fill="black", width=line_w)
-            
-            # 2. Координаты кончика стрелки (где будет треугольник)
-            # В нашей геометрии это нижняя точка второй дуги
             tip_x = ax - arc_size + 72
             tip_y = ay + 3 * arc_size - 38
-            
-            # 3. Настройка треугольника (наконечника)
             angle_rad = math.radians(angle_deg)
-            tsize = 5 * upscale  # Размер наконечника
-            
-            # Базовые точки треугольника относительно (0,0) - острие вниз
-            # (0,0) - это само острие
-            base_poly = [
-                (0, 0), 
-                (-tsize // 1.5, -tsize), 
-                (tsize // 1.5, -tsize)
-            ]
-            
-            # Вращаем точки наконечника
+            tsize = 5 * upscale
+            base_poly = [(0, 0), (-tsize // 1.5, -tsize), (tsize // 1.5, -tsize)]
             rotated_poly = []
             for px, py in base_poly:
-                # Матрица поворота
                 rx = px * math.cos(angle_rad) - py * math.sin(angle_rad)
                 ry = px * math.sin(angle_rad) + py * math.cos(angle_rad)
-                # Смещаем к точке tip_x, tip_y
                 rotated_poly.append((rx + tip_x, ry + tip_y))
-            
             td.polygon(rotated_poly, fill="black")
 
-        # --- ВЫЗОВ СТРЕЛОК С РУЧНЫМ УГЛОМ ---
-        # Теперь ты можешь менять angle_deg для каждой стрелки индивидуально
-        # 0 - смотрит прямо вниз, минус - влево, плюс - вправо
-        draw_wavy_arrow(cx - 20*upscale, arrow_y_start, angle_deg=100) # Левая
-        draw_wavy_arrow(cx - 5*upscale,  arrow_y_start, angle_deg=100)   # Центральная
-        draw_wavy_arrow(cx + 10*upscale, arrow_y_start, angle_deg=100)  # Правая
+        draw_wavy_arrow(cx - 20*upscale, arrow_y_start, angle_deg=100)
+        draw_wavy_arrow(cx - 5*upscale,  arrow_y_start, angle_deg=100)
+        draw_wavy_arrow(cx + 10*upscale, arrow_y_start, angle_deg=100)
 
-        # Ресайз и вставка
         timg = timg.resize((self.size, self.size), Image.Resampling.LANCZOS)
         draw._image.paste(timg, (int(x), int(y)), timg)
 
@@ -472,29 +385,21 @@ class LedImageGenerator:
         td = ImageDraw.Draw(timg)
         
         cx = tsize // 2
-        base_y = 45 * upscale # Линия платы
-        w = 60 * upscale      # Ширина профиля
-        h = 32 * upscale      # Высота профиля
+        base_y = 45 * upscale
+        w = 60 * upscale
         
         if p_type == "ip20" or p_type == "ip54" or p_type == "ip67_digital":
-            # IP20, IP54, IP67(DIGI SPI): Просто плата и чип сверху
             td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
             td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
-            
         elif p_type == "ip20_cob":
-            # IP20 COB: Плата и чип дугообразный
             td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", width=2*upscale)
             td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=2*upscale)
-
         elif p_type == "ip67" or p_type == "ip54_vlhke":
-            # IP67: В полукруглом корпусе со стенками находится плата и чип
             td.chord([cx-34*upscale, base_y-20*upscale, cx+34*upscale, base_y+28*upscale], 180, 360, outline="black", width=2*upscale)
             td.chord([cx-30*upscale, base_y-16*upscale, cx+30*upscale, base_y+20*upscale], 180, 360, outline="black", width=2*upscale)
             td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
             td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
-
         elif p_type == "ip68":
-            # IP68: В прямоугольнике со стенками находится плата и чип
             td.rectangle([cx-34*upscale, base_y-18*upscale, cx+34*upscale, base_y+6*upscale], outline="black", width=2*upscale)
             td.rectangle([cx-w//2, base_y-14*upscale, cx+w//2, base_y+3*upscale], outline="black", width=2*upscale)
             td.rectangle([cx-w//2, base_y-2*upscale, cx+w//2, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
@@ -504,26 +409,19 @@ class LedImageGenerator:
         draw._image.paste(timg, (int(x), int(y)), timg)
 
     def _draw_large_scheme(self, canvas, data):
-        """
-        Метод с локальным суперсэмплингом, стрелочками и всеми типами корпусов.
-        """
+        """Отрисовка схемы ленты"""
         import re
         from PIL import Image, ImageDraw
 
-        # 1. Параметры области и масштаба
-        s = 4  # Коэффициент сглаживания
+        s = 4
         area_w, area_h = 450, 300
         upscale = 2.8 * s
-        
-        # Создаем временный прозрачный холст
         temp_img = Image.new("RGBA", (area_w * s, area_h * s), (255, 255, 255, 0))
         td = ImageDraw.Draw(temp_img)
         
-        # Центр схемы во временном холсте
         cx = (area_w * s) // 2 - (20 * s)
         base_y = (area_h * s) // 2 + (85 * s)
         
-        # --- ЛОГИКА ОПРЕДЕЛЕНИЯ ТИПА (остается вашей) ---
         ip_str = str(data.get("ip", "20")).upper()
         chip_type = str(data.get("chip", "")).upper()
         color_type = str(data.get("color", "")).upper()
@@ -541,101 +439,69 @@ class LedImageGenerator:
         elif "68" in ip_str: p_type = "ip68"
         elif "20" in ip_str: p_type = "ip20_cob" if "COB" in chip_type else "ip20"
 
-        # --- ОТРИСОВКА КОРПУСА ---
         line_w = int(2.5 * s)
-        w_rect = int(29 * upscale) # Полуширина платы
+        w_rect = int(29 * upscale)
         
         if p_type in ["ip20", "ip54", "ip67_digital"]:
             td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", fill="#989898", width=line_w)
             td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y-1*upscale], outline="black", width=line_w)
-            
         elif p_type == "ip20_cob":
             td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", fill="#989898", width=line_w)
             td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+6*upscale], 180, 360, outline="black", width=line_w)
-
         elif p_type in ["ip67", "ip54_vlhke"]:
             td.chord([cx-35*upscale, base_y-22*upscale, cx+35*upscale, base_y+28*upscale], 178, 362, outline="black", width=line_w)
             td.chord([cx-31*upscale, base_y-18*upscale, cx+31*upscale, base_y+20*upscale], 178, 362, outline="black", width=line_w)
             td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+1*upscale], outline="black", fill="#989898", width=line_w)
             td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-1*upscale], outline="black", width=line_w)
-
         elif p_type == "ip68":
             td.rectangle([cx-w_rect-39, base_y-18*upscale, cx+w_rect+39, base_y+3*upscale], outline="black", width=line_w)
             td.rectangle([cx-w_rect, base_y-15*upscale, cx+w_rect, base_y], outline="black", width=line_w)
             td.rectangle([cx-w_rect+14, base_y-3*upscale, cx+w_rect-14, base_y], outline="black", fill="#989898", width=line_w)
             td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-2*upscale], outline="black", width=line_w)
 
-
-        # --- РАЗМЕРНЫЕ ЛИНИИ И СТРЕЛКИ ---
         draw_line_w = max(1, s // 2)
-        
-        # 1. ШИРИНА
         width_y = base_y + 45 * s
         x_left, x_right = cx - w_rect, cx + w_rect
-        
-        # Засечки ширины
         td.line([x_left, base_y + 10*s, x_left, width_y + 10*s], fill="black", width=draw_line_w)
         td.line([x_right, base_y + 10*s, x_right, width_y + 10*s], fill="black", width=draw_line_w)
-        # Линия со стрелками
         td.line([x_left, width_y, x_right, width_y], fill="black", width=draw_line_w)
-        # Стрелки ширины (треугольники)
         td.polygon([(x_left, width_y), (x_left + 6*s, width_y - 3*s), (x_left + 6*s, width_y + 3*s)], fill="black")
         td.polygon([(x_right, width_y), (x_right - 6*s, width_y - 3*s), (x_right - 6*s, width_y + 3*s)], fill="black")
 
-        # 2. ВЫСОТА
-        # Определяем верхнюю точку корпуса
         if p_type == "ip68": top_y = base_y - 18 * upscale
         elif p_type in ["ip67", "ip54_vlhke"]: top_y = base_y - 22 * upscale
         else: top_y = base_y - 10 * upscale
         
         bottom_y = base_y + 3 * upscale
         line_x = cx + w_rect + 25 * s
-        
-        # Засечки высоты
         td.line([line_x - 10*s, top_y, line_x + 5*s, top_y], fill="black", width=draw_line_w)
         td.line([line_x - 10*s, bottom_y, line_x + 5*s, bottom_y], fill="black", width=draw_line_w)
-        # Линия со стрелками
         td.line([line_x, top_y, line_x, bottom_y], fill="black", width=draw_line_w)
-        # Стрелки высоты
         td.polygon([(line_x, top_y), (line_x - 3*s, top_y + 6*s), (line_x + 3*s, top_y + 6*s)], fill="black")
         td.polygon([(line_x, bottom_y), (line_x - 3*s, bottom_y - 6*s), (line_x + 3*s, bottom_y - 6*s)], fill="black")
 
-        # --- СЖАТИЕ И ВСТАВКА ---
         smooth_scheme = temp_img.resize((area_w, area_h), resample=Image.LANCZOS)
-        
         paste_x = self.width - area_w - 10
         paste_y = 280
         canvas.paste(smooth_scheme, (paste_x, paste_y), smooth_scheme)
         
-        # --- ТЕКСТ (Поверх, обычным шрифтом) ---
         draw = ImageDraw.Draw(canvas)
         w_val = data.get("width", "10")
         h_val = data.get("height_val", data.get("height", "2,1"))
         
-        # Ширина
         w_txt = f"{w_val} mm"
         w_bbox = draw.textbbox((0, 0), w_txt, font=self.f_val)
         w_width = w_bbox[2] - w_bbox[0]
         draw.text((paste_x + (area_w - 40)//2 - w_width//2, paste_y + area_h - 50), w_txt, fill="black", font=self.f_val)
         
-        # 2. ВЫСОТА (вертикальный текст, центрированный по оси Y)
         h_txt = str(h_val).replace('.', ',')
         h_bbox = draw.textbbox((0, 0), h_txt, font=self.f_val)
-        h_height = h_bbox[3] + h_bbox[1]  # Реальная высота текста
-        
-        # Вычисляем центр линии высоты в координатах основного холста
-        # (top_y и bottom_y были в масштабе s, переводим их в обычный масштаб)
+        h_height = h_bbox[3] + h_bbox[1]
         line_top_final = paste_y + (top_y / s)
         line_bottom_final = paste_y + (bottom_y / s)
         line_center_y = (line_top_final + line_bottom_final) / 2
-        
-        # Итоговая координата Y для текста: центр линии минус половина высоты текста
         text_y = line_center_y - h_height / 2
-        
-        # Координата X (справа от линии высоты)
-        # line_x тоже был в масштабе s
         text_x = paste_x + (line_x / s) + 10 
-        
         draw.text((text_x, text_y), h_txt, fill="black", font=self.f_val)
 
     def _draw_rgb(self, canvas, main_draw, x, y):
@@ -687,20 +553,19 @@ class LedImageGenerator:
         main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, outline="#CCCCCC", width=1)
 
     def _draw_life(self, canvas, main_draw, x, y, val, bg_color, data):
-        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color)
+        # Gray background -> add border
+        draw_outline = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
+        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=2)
         
-        # --- СУПЕРСЭМПЛИНГ ДЛЯ ЧАСОВ ---
         oversample = 4
         temp_size = self.size * oversample
         temp_img = Image.new('RGBA', (temp_size, temp_size), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
         
-        # Рисуем круг часов
         circle_margin = 5 * oversample
         temp_draw.ellipse([circle_margin, circle_margin, temp_size - circle_margin, temp_size - circle_margin], 
                           outline="black", width=2 * oversample)
         
-        # Рисуем стрелки часов (Г-образные)
         l_x = 65 * oversample
         l_y_top = 60 * oversample
         l_y_bot = 105 * oversample
@@ -710,10 +575,9 @@ class LedImageGenerator:
         temp_img = temp_img.resize((self.size, self.size), Image.Resampling.LANCZOS)
         canvas.paste(temp_img, (int(x), int(y)), temp_img)
 
-        # --- ТЕКСТ (ЧАСЫ) ---
         full_val = val.replace(" ", "")
-        main_part = full_val[:-3] if len(full_val) > 3 else full_val # Например "50"
-        small_part = full_val[-3:] if len(full_val) > 3 else ""     # Например "000"
+        main_part = full_val[:-3] if len(full_val) > 3 else full_val
+        small_part = full_val[-3:] if len(full_val) > 3 else ""
         
         w_main = main_draw.textbbox((0, 0), main_part, font=self.f_val)[2]
         main_draw.text((x + 25, y + 18), main_part, fill="black", font=self.f_val)
@@ -726,53 +590,50 @@ class LedImageGenerator:
         
         main_draw.text((x + 35, y + 53), "h", fill="black", font=f_h)
 
-        # --- ДИНАМИЧЕСКИЕ ПАРАМЕТРЫ L и B ---
-        # Получаем значения из данных или ставим стандартные
         l_num = data.get("life_l", "70")
         b_num = data.get("life_b", "50")
-        
         l_text = f"L{l_num}"
         b_text = f"B{b_num}"
-        
         main_draw.text((x + 70, y + 63), l_text, fill="black", font=self.f_sub)
         main_draw.text((x + 70, y + 80), b_text, fill="black", font=self.f_sub)
 
     def _draw_field_content(self, draw, field, val, x, y, txt_color, full_data, v_text):
         if field == "color":
             kelvin = full_data.get("kelvin", "").strip()
-            # Список цветов, которые мы хотим видеть крупно в центре, если нет Кельвинов
             special_colors = ["R", "G", "B", "Y", "UV", "UVA", "V", "A"]
+            white_variants = ["NW", "WW", "CW"]
             
             if val in special_colors and not kelvin:
-                # --- ВАРИАНТ: КРУПНО В ЦЕНТРЕ ---
                 font = self.f_rgb_big
                 bbox = draw.textbbox((0, 0), val, font=font)
                 w_c = bbox[2] - bbox[0]
                 h_c = bbox[3] - bbox[1]
-                # Центрируем (с учетом размера квадрата 120x120)
                 draw.text((x + (self.size - w_c) / 2, y + (self.size - h_c) / 2 - 5), 
                           val, fill="white", font=font)
+            elif val in white_variants and not kelvin:
+                # --- NEW LOGIC FOR NW, WW, CW WITHOUT KELVIN ---
+                font = self.f_rgb_big
+                bbox = draw.textbbox((0, 0), val, font=font)
+                w_c = bbox[2] - bbox[0]
+                h_c = bbox[3] - bbox[1]
+                # Center text, color is BLACK
+                draw.text((x + (self.size - w_c) / 2, y + (self.size - h_c) / 2 - 5), 
+                          val, fill="black", font=font)
             else:
-                # --- ВАРИАНТ: БУКВА СВЕРХУ + КЕЛЬВИНЫ СНИЗУ ---
-                # Сама буква (val)
                 font_top = self.f_val
                 bbox_t = draw.textbbox((0, 0), val, font=font_top)
                 w_t = bbox_t[2] - bbox_t[0]
                 draw.text((x + (self.size - w_t) / 2, y + 15), val, fill="black", font=font_top)
                 
-                # Если есть кельвины (например "3000-3500")
                 if kelvin and "-" in kelvin:
                     k1, k2 = kelvin.split("-")
-                    # Первая строка (3000 -)
                     txt1 = f"{k1} -"
                     w1 = draw.textbbox((0,0), txt1, font=self.f_mid)[2]
                     draw.text((x + (self.size - w1) / 2, y + 50), txt1, fill="black", font=self.f_mid)
-                    # Вторая строка (3500K)
                     txt2 = f"{k2}K"
                     w2 = draw.textbbox((0,0), txt2, font=self.f_mid)[2]
                     draw.text((x + (self.size - w2) - 50 / 2, y + 75), txt2, fill="black", font=self.f_mid)
                 elif kelvin:
-                    # Если кельвин просто одним числом
                     w_k = draw.textbbox((0,0), kelvin, font=self.f_mid)[2]
                     draw.text((x + (self.size - w_k) / 2, y + 60), kelvin, fill="black", font=self.f_mid)
         elif field == "chip":
@@ -801,90 +662,56 @@ class LedImageGenerator:
             draw.line([x + 20, line_y - 5, x + 20, line_y + 5], fill="black", width=2)
             draw.line([x + self.size - 20, line_y - 5, x + self.size - 20, line_y + 5], fill="black", width=2)
             arrow_y = 55
-            draw.line([x + 20, y + arrow_y, x + self.size - 21, y + arrow_y], fill="black", width=2) # horizontal line with arrows
-            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y - 3], fill="black", width=2) #arrow top side
-            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y + 3], fill="black", width=2) #arrow bottom side
+            draw.line([x + 20, y + arrow_y, x + self.size - 21, y + arrow_y], fill="black", width=2) 
+            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y - 3], fill="black", width=2) 
+            draw.line([x + 21, y + arrow_y, x + 26, y + arrow_y + 3], fill="black", width=2) 
             draw.line([x + self.size - 20, y + arrow_y, x + self.size - 26, y + arrow_y - 3], fill="black", width=1)
             draw.line([x + self.size - 20, y + arrow_y, x + self.size - 26, y + arrow_y + 3], fill="black", width=1)
             self.draw_circuit(draw, x, y, self.size, "single" if field == "max_single" else "double", v_text)
         elif field == "cut":
-            # 1. Сначала ищем в стандартных полях
             led_val = str(full_data.get("led_segment", "")).strip()
-            
-            # 2. Если пусто, ищем в описании (вашем debug_source.txt)
             if not led_val or led_val == "0":
-                # Берем все данные в одну строку для поиска
                 all_text = " ".join(str(v) for v in full_data.values())
-                # Ищем комбинации типа "120LED", "120 LED", "120LED/m"
                 match = re.search(r'(\d+)\s*LED', all_text, re.IGNORECASE)
                 if match:
                     led_val = match.group(1)
-
-            # Очистка на случай, если пришло что-то странное
             led_val = "".join(filter(str.isdigit, led_val)) if led_val else "0"
-
-            # Верхняя часть: Число + LED
             w_l = draw.textbbox((0,0), led_val, font=self.f_cut_num)[2]
             draw.text((x + 35 - w_l/2, y + 15), led_val, fill="black", font=self.f_cut_num)
             draw.text((x + 40 + w_l/2, y + 15), "LED", fill="black", font=self.f_mid)
-            
-            # Разделительная линия
             line_y = y + 55
             draw.line([x + 15, line_y, x + self.size - 15, line_y], fill="black", width=2)
             draw.line([x + 15, line_y - 5, x + 15, line_y + 5], fill="black", width=2)
             draw.line([x + self.size - 15, line_y - 5, x + self.size - 15, line_y + 5], fill="black", width=2)
-            
-            # Нижняя часть: Кратность резки (val) + mm
             w_m = draw.textbbox((0,0), val, font=self.f_cut_num)[2]
             draw.text((x + (self.size - w_m)/2, y + 65), val, fill="black", font=self.f_cut_num)
-            
-            # Центрируем надпись "mm"
             w_mm = draw.textbbox((0,0), "mm", font=self.f_mid)[2]
             draw.text((x + (self.size - w_mm)/2, y + 90), "mm", fill="black", font=self.f_mid)
         elif field == "width":
-            # Логика выбора иконки по твоим пунктам
             ip_val = str(full_data.get("ip", "")).strip()
             chip_val = str(full_data.get("chip", "")).upper()
             color_val = str(full_data.get("color", "")).upper()
             model_val = str(full_data.get("model", "")).upper().strip()
-            # all_text = str(full_data).lower()
-            
             if not model_val:
                 all_data_str = str(full_data)
                 m_search = re.search(r'(\d{2}B)', all_data_str)
                 if m_search:
                     model_val = m_search.group(1)
-
             target_models = ["79B", "80B", "81B", "82B", "83B", "84B"]
-
-            icon_to_draw = "ip20" # По умолчанию
-            
-            # print(f"--- DEBUG INFO ---")
-            # print(f"Full Data Keys: {list(full_data.keys())}") # Проверим, какие ключи вообще есть
-            # print(f"MODEL_VAL: '{model_val}'")
-            # print(f"------------------")
-
-            # Приоритет 1: Digital SPI
+            icon_to_draw = "ip20"
             if "DIGITAL SPI" in color_val:
                 icon_to_draw = "ip67_digital"
-            # УСЛОВИЕ: Если IP54 и модель входит в наш список
             elif ip_val == "54" and model_val in target_models:
                 icon_to_draw = "ip54_vlhke"
             elif ip_val == "54":
                 icon_to_draw = "ip54"
-            # Приоритет 3: Конкретные IP
             elif ip_val == "67":
                 icon_to_draw = "ip67"
             elif ip_val == "68":
                 icon_to_draw = "ip68"
-            # Приоритет 4: IP20 (обычная или COB)
             elif ip_val == "20":
                 icon_to_draw = "ip20_cob" if "COB" in chip_val else "ip20"
-
-            # Рисуем иконку
             self._draw_width_profile(draw, x, y, icon_to_draw)
-            
-            # Рисуем текст (число и mm)
             line_y = y + 15
             draw.line([x + 26, line_y - 7, x + 26, line_y + 7], fill="black", width=1)
             draw.line([x + self.size - 26, line_y - 7, x + self.size - 26, line_y + 7], fill="black", width=1)
@@ -896,7 +723,6 @@ class LedImageGenerator:
             draw.line([x + self.size - 26, y + arrow_y, x + self.size - 32, y + arrow_y + 3], fill="black", width=1)
             w_v = draw.textbbox((0,0), val, font=self.f_val)[2]
             draw.text((x + (self.size - w_v) / 2, y + 50), val, fill="black", font=self.f_val)
-            
             w_m = draw.textbbox((0,0), "mm", font=self.f_mid)[2]
             draw.text((x + (self.size - w_m) / 2, y + 78), "mm", fill="black", font=self.f_mid)
         else:
@@ -906,5 +732,3 @@ class LedImageGenerator:
             if sub:
                 w_s = draw.textbbox((0,0), sub, font=self.f_mid)[2]
                 draw.text((x + (self.size-w_s)/2, y + 65), sub, fill=txt_color, font=self.f_mid)
-    
-    
