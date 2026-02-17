@@ -89,6 +89,39 @@ class LedImageGenerator:
                 txt_color = "black"
 
                 if field == "color":
+                    # --- NOVÁ LOGIKA PRO PRODUKTOVÉ BARVY ---
+                    prod_map = {
+                        "OVOCE O": "o",
+                        "SÝRY S": "s",
+                        "PEČIVO P": "p",
+                        "UZENINY U": "u",
+                        "MASO M": "m",
+                        "MRAŽENÉ MR": "mr"
+                    }
+                    
+                    found_prod_file = None
+                    for key, fname in prod_map.items():
+                        if key in val_up:
+                            found_prod_file = fname
+                            break
+                    
+                    if found_prod_file:
+                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+                        icon_path = self._find_image_path(found_prod_file)
+                        if icon_path:
+                            try:
+                                with Image.open(icon_path) as icon:
+                                    target_size = (self.size, self.size)
+                                    icon = icon.resize(target_size, Image.Resampling.LANCZOS)
+                                    if icon.mode == 'RGBA':
+                                        draw._image.paste(icon, (int(curr_x), int(curr_y)), icon)
+                                    else:
+                                        draw._image.paste(icon, (int(curr_x), int(curr_y)))
+                            except Exception as e:
+                                print(f"Error loading product icon {found_prod_file}: {e}")
+                        continue
+                    # ----------------------------------------
+
                     if "SPI" in val_up:
                         draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
                         draw.text((curr_x + 12, curr_y + 15), "D", fill="#E30613", font=self.f_rgb_big)
@@ -185,11 +218,11 @@ class LedImageGenerator:
             
             if icon_path:
                 with Image.open(icon_path) as icon:
-                    target_size = (self.size - 14, self.size - 14)
-                    icon.thumbnail(target_size, Image.Resampling.LANCZOS)
+                    target_size = (self.size, self.size)
+                    icon = icon.resize(target_size, Image.Resampling.LANCZOS)
                     
-                    paste_x = int(x + (self.size - icon.width) / 2)
-                    paste_y = int(y + (self.size - icon.height) / 2)
+                    paste_x = int(x)
+                    paste_y = int(y)
                     
                     if icon.mode == 'RGBA':
                         draw._image.paste(icon, (paste_x, paste_y), icon)
