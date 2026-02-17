@@ -718,11 +718,11 @@ class LedImageGenerator:
 
             # 3. Отрисовка текста напряжения (V DC) внизу
             # v_text содержит строку, например "24 V DC"
-            w_volt = draw.textbbox((0,0), v_text, font=self.f_mid)[2]
+            w_volt = draw.textbbox((0,0), v_text, font=self.f_sub)[2]
             start_volt_x = x + (self.size - w_volt) / 2
-            volt_y = y + 85 # Отступ для нижней части
+            volt_y = y + 88 # Отступ для нижней части
             
-            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_mid)
+            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_sub)
 
         elif field == "cut":
             led_val = str(full_data.get("led_segment", "")).strip()
