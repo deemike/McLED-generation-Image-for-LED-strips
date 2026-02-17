@@ -122,7 +122,7 @@ def fetch_data(url, driver=None):
         "ip": r'IP(\d+)',
         "width": r'Šířka\s?\[mm\][:\s]+(\d+)',
         "height": r'Výška / hloubka\s?\[mm\][:\s]+(\d+)',
-        "model": r'Model\s*(\d{2,3}B)', # Původní regex
+        "model": r'Model\s*(\d{2,3}[A-Z])',
         "life_full": r'L(\d+)/B(\d+).*?\[h\]:\s*(\d+[\s.]\d+|\d+)',
         "cri": r'Index podání barev CRI[:\s]+(90-100|90)',
         "angle": r'Úhel vyzařování\s?\[°\][:\s]+(\d+)'
@@ -144,14 +144,5 @@ def fetch_data(url, driver=None):
                 res["life_b"] = match.group(2)
                 res["life"] = match.group(3).replace(" ", "").replace(".", "")
 
-    # --- FALLBACK PRO MODEL ---
-    # Pokud nebyl nalezen "Model XXB", zkusíme najít kód ML-XXXX v textu, nebo necháme prázdné
-    if "model" not in res:
-        # Zkusíme najít ML kód v textu
-        ml_match = re.search(r'(ML-\d{3}[.\-]\d{3}[.\-]\d{2}[.\-][0-9X])', source, re.IGNORECASE)
-        if ml_match:
-            res["model"] = ml_match.group(1).upper()
-        else:
-            res["model"] = "" # Aby nechyběl klíč
-
+    # УДАЛЕНО: Старый, ошибочный fallback для модели.
     return res

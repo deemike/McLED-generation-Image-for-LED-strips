@@ -32,11 +32,8 @@ class LedImageGenerator:
 
     def _find_image_path(self, base_name):
         """Helper to find image path case-insensitively and with different extensions"""
-        # Použijeme absolutní cestu k adresáři skriptu, abychom našli složku images spolehlivě
         script_dir = os.path.dirname(os.path.abspath(__file__))
         base_dir = os.path.join(script_dir, "images")
-        
-        # print(f"DEBUG: Hledám obrázek '{base_name}' ve složce: {base_dir}") # DEBUG
         
         if not os.path.exists(base_dir):
             print(f"ERROR: Složka s obrázky neexistuje: {base_dir}")
@@ -44,13 +41,10 @@ class LedImageGenerator:
             
         target_name = base_name.lower()
         
-        # Projdeme soubory ve složce
         for f in os.listdir(base_dir):
-            # Porovnáváme název souboru bez přípony
             name_part = os.path.splitext(f)[0]
             if name_part.lower() == target_name:
                 full_path = os.path.join(base_dir, f)
-                # print(f"DEBUG: Nalezen obrázek: {full_path}") # DEBUG
                 return full_path
                 
         print(f"WARNING: Obrázek '{base_name}' nebyl nalezen ve složce images.")
@@ -89,7 +83,7 @@ class LedImageGenerator:
                 txt_color = "black"
 
                 if field == "color":
-                    # --- NOVÁ LOGIKA PRO PRODUKTOVÉ BARVY ---
+                    # --- НОВАЯ ЛОГИКА ДЛЯ ПРОДУКТОВЫХ ЦВЕТОВ ---
                     prod_map = {
                         "OVOCE O": "o",
                         "SÝRY S": "s",
@@ -100,9 +94,9 @@ class LedImageGenerator:
                     }
                     
                     found_prod_file = None
-                    for key, fname in prod_map.items():
+                    for key, fname_base in prod_map.items():
                         if key in val_up:
-                            found_prod_file = fname
+                            found_prod_file = fname_base
                             break
                     
                     if found_prod_file:
@@ -119,7 +113,7 @@ class LedImageGenerator:
                                         draw._image.paste(icon, (int(curr_x), int(curr_y)))
                             except Exception as e:
                                 print(f"Error loading product icon {found_prod_file}: {e}")
-                        continue
+                        continue # Пропускаем остальную логику цвета
                     # ----------------------------------------
 
                     if "SPI" in val_up:
@@ -160,7 +154,7 @@ class LedImageGenerator:
                     self._draw_life(canvas, draw, curr_x, curr_y, val, bg_color, data)
                     continue
 
-                if field == "color":
+                if field == "color": # Если не было продуктовых цветов, то старая логика
                     bg_color = config.COLOR_MAP_LIGHT.get(val.upper(), "#EEEEEE")
                 elif field == "chip":
                     clean_val = val.upper().replace(" ", "").replace("-", "")
@@ -206,45 +200,42 @@ class LedImageGenerator:
 
         self._draw_large_scheme(canvas, data)
 
-        # --- PŘIDÁNÍ SPODNÍ ČÁSTI (FOOTER) ---
+        # --- ЛОГИКА ДОБАВЛЕНИЯ НИЖНЕЙ ЧАСТИ (ФУТЕРА) ---
         final_canvas = Image.new('RGB', (1000, 1000), 'white')
         final_canvas.paste(canvas, (0, 0))
 
-        # 1. Získání parametrů pro název souboru
         model_full = str(data.get("model", "")).upper().strip()
-        # Hledáme 2 číslice a písmeno (např. 10A)
-        model_match = re.search(r'(\d{2}[A-Z])', model_full)
-        model_code = model_match.group(1) if model_match else ""
+        model_code = ""
+        # Улучшенная регулярка для поиска модели (2 цифры + буква, или 3 цифры + буква)
+        model_match = re.search(r'(\d{2,3}[A-Z])', model_full)
+        if model_match:
+            model_code = model_match.group(1)
         
-        # Pokud nešlo najít regulárním výrazem, zkusíme první 3 znaky
-        if not model_code and len(model_full) >= 3 and model_full[:2].isdigit() and model_full[2].isalpha():
-            model_code = model_full[:3]
-
         volt_str = str(data.get("voltage", "")).strip()
-        volt_code = "".join(filter(str.isdigit, volt_str)) # 12 nebo 24
+        volt_code = "".join(filter(str.isdigit, volt_str)) 
         
         color_val = str(data.get("color", "")).upper()
         
-        # Logika pro suffix W/Y
-        suffix = "W" # Default (pro bílé)
+        suffix = "W" # По умолчанию для белых
         
-        white_types = ["NW", "CW", "WW", "EWW", "UWW", "DW", "DUAL", "CCT"]
-        color_types = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
+        white_keywords = ["NW", "CW", "WW", "EWW", "UWW", "DW", "DUAL", "CCT"]
+        yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
         
-        # Pokud je barva explicitně v barevném seznamu -> Y
-        # (Kontrola color_types nejdřív, nebo naopak? Zadání říká NW... -> W, Y... -> Y)
-        
-        is_white = any(t in color_val for t in white_types)
-        is_colored = any(t in color_val for t in color_types)
-        
-        if is_colored and not is_white:
+        # Проверка на наличие ключевых слов для определения суффикса
+        is_white_type = any(kw in color_val for kw in white_keywords)
+        is_yellow_type = any(kw in color_val for kw in yellow_keywords)
+
+        if is_yellow_type and not is_white_type:
             suffix = "Y"
-        elif is_colored and is_white: 
-            # Např. RGB+W -> spíše Y nebo W? RGBW obvykle mívá čipy 4v1 nebo střídavě. 
-            # Zadání říká "если ... цвет Y, G, B, R - то ...Y". 
-            # RGB má barevné diody -> Y (žluté na pásku nejsou, ale logika názvů souborů tak asi je)
-            suffix = "Y" 
-        
+        elif is_yellow_type and is_white_type: 
+            # Если содержит и белые и желтые ключевые слова (например RGB+CCT)
+            # По условию задачи, если есть Y,G,B,R - то Y.
+            if any(c in color_val for c in ["Y", "G", "B", "R", "RGB"]):
+                suffix = "Y"
+            else:
+                suffix = "W" # Fallback, если не однозначно цветной
+        # Иначе (если ни того, ни другого нет, или только белые ключевые слова) остается W
+
         if model_code and volt_code:
             footer_name = f"{model_code}{volt_code}{suffix}"
             footer_path = self._find_image_path(footer_name)
@@ -252,19 +243,19 @@ class LedImageGenerator:
             if footer_path:
                 try:
                     with Image.open(footer_path) as footer:
-                        # Resizing if needed to width 1000
                         if footer.width != 1000:
                             ratio = 1000 / footer.width
                             new_h = int(footer.height * ratio)
                             footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
                         
-                        # Paste at bottom
                         final_canvas.paste(footer, (0, 1000 - footer.height))
-                        # print(f"Added footer: {footer_name}")
+                        print(f"Добавлен футер: {footer_name}")
                 except Exception as e:
-                    print(f"Error adding footer {footer_name}: {e}")
+                    print(f"Ошибка при добавлении футера {footer_name}: {e}")
             else:
-                print(f"Footer image not found: {footer_name}")
+                print(f"Футер не найден: {footer_name}")
+        else:
+            print(f"Недостаточно данных для определения футера. Модель: '{model_full}', Напряжение: '{volt_str}', Цвет: '{color_val}'")
         
         return final_canvas
 
@@ -489,7 +480,7 @@ class LedImageGenerator:
             td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
             td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y], outline="black", width=2*upscale)
         elif p_type == "ip20_cob":
-            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", width=2*upscale)
+            td.rectangle([cx-34*upscale, base_y-2*upscale, cx+34*upscale, base_y+3*upscale], outline="black", fill="#989898", width=2*upscale)
             td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+8*upscale], 180, 360, outline="black", width=2*upscale)
         elif p_type == "ip67" or p_type == "ip54_vlhke":
             td.chord([cx-34*upscale, base_y-20*upscale, cx+34*upscale, base_y+28*upscale], 180, 360, outline="black", width=2*upscale)
@@ -650,7 +641,6 @@ class LedImageGenerator:
         main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, outline="#CCCCCC", width=1)
 
     def _draw_life(self, canvas, main_draw, x, y, val, bg_color, data):
-        # Gray background -> add border
         draw_outline = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
         main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=1)
         
@@ -752,7 +742,7 @@ class LedImageGenerator:
                 
                 if icon_path:
                     with Image.open(icon_path) as icon:
-                        target_size = (self.size, self.size) # New
+                        target_size = (self.size, self.size)
                         icon = icon.resize(target_size, Image.Resampling.LANCZOS)
                         paste_x = int(x)
                         paste_y = int(y)
