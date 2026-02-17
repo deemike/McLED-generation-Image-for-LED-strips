@@ -66,6 +66,22 @@ def fetch_data(url, driver=None):
     elif re.search(r'Barva světla[:\s]+duální bílá\s+([A-Z]+-[A-Z]+)', source, re.IGNORECASE):
         match = re.search(r'Barva světla[:\s]+duální bílá\s+([A-Z]+-[A-Z]+)', source, re.IGNORECASE)
         res["color"] = match.group(1).upper().replace("-", "+")
+    
+    # --- SPECIÁLNÍ PRODUKTOVÉ BARVY ---
+    elif re.search(r'Barva světla[:\s]+Produktové Ovoce O', source, re.IGNORECASE):
+        res["color"] = "Ovoce O"
+    elif re.search(r'Barva světla[:\s]+Produktové Sýry S', source, re.IGNORECASE):
+        res["color"] = "Sýry S"
+    elif re.search(r'Barva světla[:\s]+Produktový Pečivo P', source, re.IGNORECASE):
+        res["color"] = "Pečivo P"
+    elif re.search(r'Barva světla[:\s]+Produktové Uzeniny U', source, re.IGNORECASE):
+        res["color"] = "Uzeniny U"
+    elif re.search(r'Barva světla[:\s]+Produktové Maso M', source, re.IGNORECASE):
+        res["color"] = "Maso M"
+    elif re.search(r'Barva světla[:\s]+Produktový Mražené MR', source, re.IGNORECASE):
+        res["color"] = "Mražené MR"
+    # ----------------------------------
+
     # 6. Jednobarevné spec.
     elif re.search(r'Barva světla[:\s]+denní bílý DW', source, re.IGNORECASE):
         res["color"] = "DW"
