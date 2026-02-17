@@ -17,7 +17,7 @@ class LedApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("McLED Visual Pro v1.4 (Robust Batch)")
+        self.title("McLED Visual Pro v1.5 (Complete Image)")
         self.geometry("1000x850")
         
         ctk.set_appearance_mode(config.APPEARANCE_MODE)

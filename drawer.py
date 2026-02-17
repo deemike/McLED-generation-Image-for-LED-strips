@@ -206,7 +206,67 @@ class LedImageGenerator:
 
         self._draw_large_scheme(canvas, data)
 
-        return canvas
+        # --- PŘIDÁNÍ SPODNÍ ČÁSTI (FOOTER) ---
+        final_canvas = Image.new('RGB', (1000, 1000), 'white')
+        final_canvas.paste(canvas, (0, 0))
+
+        # 1. Získání parametrů pro název souboru
+        model_full = str(data.get("model", "")).upper().strip()
+        # Hledáme 2 číslice a písmeno (např. 10A)
+        model_match = re.search(r'(\d{2}[A-Z])', model_full)
+        model_code = model_match.group(1) if model_match else ""
+        
+        # Pokud nešlo najít regulárním výrazem, zkusíme první 3 znaky
+        if not model_code and len(model_full) >= 3 and model_full[:2].isdigit() and model_full[2].isalpha():
+            model_code = model_full[:3]
+
+        volt_str = str(data.get("voltage", "")).strip()
+        volt_code = "".join(filter(str.isdigit, volt_str)) # 12 nebo 24
+        
+        color_val = str(data.get("color", "")).upper()
+        
+        # Logika pro suffix W/Y
+        suffix = "W" # Default (pro bílé)
+        
+        white_types = ["NW", "CW", "WW", "EWW", "UWW", "DW", "DUAL", "CCT"]
+        color_types = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
+        
+        # Pokud je barva explicitně v barevném seznamu -> Y
+        # (Kontrola color_types nejdřív, nebo naopak? Zadání říká NW... -> W, Y... -> Y)
+        
+        is_white = any(t in color_val for t in white_types)
+        is_colored = any(t in color_val for t in color_types)
+        
+        if is_colored and not is_white:
+            suffix = "Y"
+        elif is_colored and is_white: 
+            # Např. RGB+W -> spíše Y nebo W? RGBW obvykle mívá čipy 4v1 nebo střídavě. 
+            # Zadání říká "если ... цвет Y, G, B, R - то ...Y". 
+            # RGB má barevné diody -> Y (žluté na pásku nejsou, ale logika názvů souborů tak asi je)
+            suffix = "Y" 
+        
+        if model_code and volt_code:
+            footer_name = f"{model_code}{volt_code}{suffix}"
+            footer_path = self._find_image_path(footer_name)
+            
+            if footer_path:
+                try:
+                    with Image.open(footer_path) as footer:
+                        # Resizing if needed to width 1000
+                        if footer.width != 1000:
+                            ratio = 1000 / footer.width
+                            new_h = int(footer.height * ratio)
+                            footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
+                        
+                        # Paste at bottom
+                        final_canvas.paste(footer, (0, 1000 - footer.height))
+                        # print(f"Added footer: {footer_name}")
+                except Exception as e:
+                    print(f"Error adding footer {footer_name}: {e}")
+            else:
+                print(f"Footer image not found: {footer_name}")
+        
+        return final_canvas
 
     def _draw_cri(self, draw, x, y):
         """Отрисовка CRI 90 с использованием иконки"""
@@ -218,11 +278,11 @@ class LedImageGenerator:
             
             if icon_path:
                 with Image.open(icon_path) as icon:
-                    target_size = (self.size, self.size)
-                    icon = icon.resize(target_size, Image.Resampling.LANCZOS)
+                    target_size = (self.size - 14, self.size - 14)
+                    icon.thumbnail(target_size, Image.Resampling.LANCZOS)
                     
-                    paste_x = int(x)
-                    paste_y = int(y)
+                    paste_x = int(x + (self.size - icon.width) / 2)
+                    paste_y = int(y + (self.size - icon.height) / 2)
                     
                     if icon.mode == 'RGBA':
                         draw._image.paste(icon, (paste_x, paste_y), icon)
@@ -648,12 +708,10 @@ class LedImageGenerator:
                 draw.text((x + (self.size - w_c) / 2, y + (self.size - h_c) / 2 - 5), 
                           val, fill="white", font=font)
             elif val in white_variants and not kelvin:
-                # --- NEW LOGIC FOR NW, WW, CW WITHOUT KELVIN ---
                 font = self.f_rgb_big
                 bbox = draw.textbbox((0, 0), val, font=font)
                 w_c = bbox[2] - bbox[0]
                 h_c = bbox[3] - bbox[1]
-                # Center text, color is BLACK
                 draw.text((x + (self.size - w_c) / 2, y + (self.size - h_c) / 2 - 5), 
                           val, fill="black", font=font)
             else:
@@ -750,12 +808,12 @@ class LedImageGenerator:
             draw.text((start_text_x + w_le + w_val, text_y + 4), " m", fill="black", font=self.f_mid)
 
             # 3. Отрисовка текста напряжения (V DC) внизу
-            # v_text содержит строку, например "24 V DC"
-            w_volt = draw.textbbox((0,0), v_text, font=self.f_sub)[2]
+            # v_text obsahuje строку, např. "24 V DC"
+            w_volt = draw.textbbox((0,0), v_text, font=self.f_mid)[2]
             start_volt_x = x + (self.size - w_volt) / 2
-            volt_y = y + 88 # Отступ для нижней части
+            volt_y = y + 85 # Отступ для нижней части
             
-            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_sub)
+            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_mid)
 
         elif field == "cut":
             led_val = str(full_data.get("led_segment", "")).strip()
