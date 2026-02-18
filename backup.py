@@ -368,7 +368,7 @@ class LedApp(ctk.CTk):
                         w_s = draw.textbbox((0,0), sub, font=f_mid)[2]
                         draw.text((curr_x + (size-w_s)/2, curr_y + 65), sub, fill=txt_color, font=f_mid)
 
-        filename = f"{self.url_input.get().split('/')[-1].upper().replace('-', '.')}_30.jpg"
+        filename = f"{self.url_input.get().split('/')[-1].upper().replace('-', '.')}_30.webp"
         canvas.save(filename, "JPEG", quality=95)
         os.startfile(filename) if os.name == 'nt' else canvas.show()
         self.show_status("Готово", f"Файл сохранен:\n{filename}")
