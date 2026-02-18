@@ -36,16 +36,13 @@ class LedImageGenerator:
         base_dir = os.path.join(script_dir, "images")
         
         if not os.path.exists(base_dir):
-            print(f"ERROR: Složka s obrázky neexistuje: {base_dir}")
             return None
             
         target_name = base_name.lower()
-        
         for f in os.listdir(base_dir):
             name_part = os.path.splitext(f)[0]
             if name_part.lower() == target_name:
-                full_path = os.path.join(base_dir, f)
-                return full_path
+                return os.path.join(base_dir, f)
                 
         print(f"WARNING: Obrázek '{base_name}' nebyl nalezen ve složce images.")
         return None
@@ -83,14 +80,8 @@ class LedImageGenerator:
                 txt_color = "black"
 
                 if field == "color":
-                    # --- НОВАЯ ЛОГИКА ДЛЯ ПРОДУКТОВЫХ ЦВЕТОВ ---
                     prod_map = {
-                        "OVOCE O": "o",
-                        "SÝRY S": "s",
-                        "PEČIVO P": "p",
-                        "UZENINY U": "u",
-                        "MASO M": "m",
-                        "MRAŽENÉ MR": "mr"
+                        "OVOCE O": "o", "SÝRY S": "s", "PEČIVO P": "p", "UZENINY U": "u", "MASO M": "m", "MRAŽENÉ MR": "mr"
                     }
                     
                     found_prod_file = None
@@ -105,16 +96,21 @@ class LedImageGenerator:
                         if icon_path:
                             try:
                                 with Image.open(icon_path) as icon:
-                                    target_size = (self.size, self.size)
-                                    icon = icon.resize(target_size, Image.Resampling.LANCZOS)
+                                    icon = icon.resize((self.size, self.size), Image.Resampling.LANCZOS)
                                     if icon.mode == 'RGBA':
                                         draw._image.paste(icon, (int(curr_x), int(curr_y)), icon)
                                     else:
                                         draw._image.paste(icon, (int(curr_x), int(curr_y)))
                             except Exception as e:
                                 print(f"Error loading product icon {found_prod_file}: {e}")
-                        continue # Пропускаем остальную логику цвета
-                    # ----------------------------------------
+                        continue
+
+                    # --- ЦВЕТА NW, WW, CW БЕЗ КЕЛЬВИНОВ ---
+                    kelvin = data.get("kelvin", "").strip()
+                    if val_up in ["NW", "WW", "CW"] and not kelvin:
+                        draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+                        self._draw_field_content(draw, field, val, curr_x, curr_y, "black", data, v_text_circuit)
+                        continue
 
                     if "SPI" in val_up:
                         draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
@@ -142,25 +138,21 @@ class LedImageGenerator:
                         continue
                     
                     if "+" in val or "RGB" in val: 
-                        if "RGB" in val and "+" not in val:
-                             self._draw_rgb(canvas, draw, curr_x, curr_y)
-                        elif "RGB" in val and "+" in val:
-                             self._draw_rgbw(canvas, draw, curr_x, curr_y, val)
-                        else:
-                             self._draw_dual_white(canvas, draw, curr_x, curr_y, val)
+                        if "RGB" in val and "+" not in val: self._draw_rgb(canvas, draw, curr_x, curr_y)
+                        elif "RGB" in val and "+" in val: self._draw_rgbw(canvas, draw, curr_x, curr_y, val)
+                        else: self._draw_dual_white(canvas, draw, curr_x, curr_y, val)
                         continue
 
                 if field == "life":
                     self._draw_life(canvas, draw, curr_x, curr_y, val, bg_color, data)
                     continue
 
-                if field == "color": # Если не было продуктовых цветов, то старая логика
+                if field == "color": 
                     bg_color = config.COLOR_MAP_LIGHT.get(val.upper(), "#EEEEEE")
                 elif field == "chip":
                     clean_val = val.upper().replace(" ", "").replace("-", "")
                     for k, h in config.COLOR_MAP_CHIP.items():
-                        if k.upper() in clean_val:
-                            bg_color = h; txt_color = "white"; break
+                        if k.upper() in clean_val: bg_color = h; txt_color = "white"; break
                 elif field == "ip":
                     txt_color = config.COLOR_MAP_IP.get("IP"+val, config.COLOR_MAP_IP.get(val, "#A68FB8"))
                 elif field == "voltage":
@@ -175,28 +167,19 @@ class LedImageGenerator:
 
         extra_fields = []
         if data.get("cri") == "90": extra_fields.append("cri")
-        
-        power_str = data.get("power", "0").replace(",", ".")
         try:
-            power_val = float(power_str)
-        except ValueError:
-            power_val = 0.0
-            
-        if power_val >= 28.8:
-            extra_fields.append("al_profile")
-
+            p_val = float(data.get("power", "0").replace(",", "."))
+            if p_val >= 28.8: extra_fields.append("al_profile")
+        except: pass
         if data.get("angle"): extra_fields.append("angle")
 
         for idx, field in enumerate(extra_fields):
             curr_x = x_start + idx * (self.size + self.gap)
             curr_y = y_start + 2 * (self.size + self.gap)
             
-            if field == "cri":
-                self._draw_cri(draw, curr_x, curr_y)
-            elif field == "angle":
-                self._draw_angle(draw, curr_x, curr_y, data.get("angle"))
-            elif field == "al_profile":
-                self._draw_al_profile(draw, curr_x, curr_y)
+            if field == "cri": self._draw_cri(draw, curr_x, curr_y)
+            elif field == "angle": self._draw_angle(draw, curr_x, curr_y, data.get("angle"))
+            elif field == "al_profile": self._draw_al_profile(draw, curr_x, curr_y)
 
         self._draw_large_scheme(canvas, data)
 
@@ -205,57 +188,47 @@ class LedImageGenerator:
         final_canvas.paste(canvas, (0, 0))
 
         model_full = str(data.get("model", "")).upper().strip()
-        model_code = ""
-        # Улучшенная регулярка для поиска модели (2 цифры + буква, или 3 цифры + буква)
-        model_match = re.search(r'(\d{2,3}[A-Z])', model_full)
-        if model_match:
-            model_code = model_match.group(1)
+        model_match = re.search(r'(\d{2}[A-Z])', model_full)
+        model_code = model_match.group(1) if model_match else ""
         
         volt_str = str(data.get("voltage", "")).strip()
         volt_code = "".join(filter(str.isdigit, volt_str)) 
         
         color_val = str(data.get("color", "")).upper()
         
-        suffix = "W" # По умолчанию для белых
-        
         white_keywords = ["NW", "CW", "WW", "EWW", "UWW", "DW", "DUAL", "CCT"]
         yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
         
-        # Проверка на наличие ключевых слов для определения суффикса
-        is_white_type = any(kw in color_val for kw in white_keywords)
-        is_yellow_type = any(kw in color_val for kw in yellow_keywords)
-
-        if is_yellow_type and not is_white_type:
+        suffix = "W"
+        if any(kw in color_val for kw in yellow_keywords):
             suffix = "Y"
-        elif is_yellow_type and is_white_type: 
-            # Если содержит и белые и желтые ключевые слова (например RGB+CCT)
-            # По условию задачи, если есть Y,G,B,R - то Y.
-            if any(c in color_val for c in ["Y", "G", "B", "R", "RGB"]):
-                suffix = "Y"
-            else:
-                suffix = "W" # Fallback, если не однозначно цветной
-        # Иначе (если ни того, ни другого нет, или только белые ключевые слова) остается W
+        elif any(kw in color_val for kw in white_keywords):
+            suffix = "W"
 
         if model_code and volt_code:
-            footer_name = f"{model_code}{volt_code}{suffix}"
-            footer_path = self._find_image_path(footer_name)
+            # 1. Пробуем найти полное имя: МОДЕЛЬ + ВОЛЬТ + СУФФИКС (напр. 10A24Y)
+            footer_name_full = f"{model_code}{volt_code}{suffix}"
+            footer_path = self._find_image_path(footer_name_full)
             
+            # 2. Если не нашли, пробуем без суффикса: МОДЕЛЬ + ВОЛЬТ (напр. 37A24)
+            if not footer_path:
+                footer_name_short = f"{model_code}{volt_code}"
+                footer_path = self._find_image_path(footer_name_short)
+
             if footer_path:
                 try:
                     with Image.open(footer_path) as footer:
-                        if footer.width != 1000:
-                            ratio = 1000 / footer.width
-                            new_h = int(footer.height * ratio)
-                            footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
+                        # Масштабируем по ширине 1000px
+                        ratio = 1000 / footer.width
+                        new_h = int(footer.height * ratio)
+                        footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
                         
                         final_canvas.paste(footer, (0, 1000 - footer.height))
-                        print(f"Добавлен футер: {footer_name}")
+                        print(f"SUCCESS: Footer added: {os.path.basename(footer_path)}")
                 except Exception as e:
-                    print(f"Ошибка при добавлении футера {footer_name}: {e}")
+                    print(f"ERROR adding footer: {e}")
             else:
-                print(f"Футер не найден: {footer_name}")
-        else:
-            print(f"Недостаточно данных для определения футера. Модель: '{model_full}', Напряжение: '{volt_str}', Цвет: '{color_val}'")
+                print(f"WARNING: No footer found for {model_code} {volt_code}")
         
         return final_canvas
 
@@ -269,19 +242,13 @@ class LedImageGenerator:
             
             if icon_path:
                 with Image.open(icon_path) as icon:
-                    target_size = (self.size - 14, self.size - 14)
-                    icon.thumbnail(target_size, Image.Resampling.LANCZOS)
-                    
-                    paste_x = int(x + (self.size - icon.width) / 2)
-                    paste_y = int(y + (self.size - icon.height) / 2)
-                    
-                    if icon.mode == 'RGBA':
-                        draw._image.paste(icon, (paste_x, paste_y), icon)
-                    else:
-                        draw._image.paste(icon, (paste_x, paste_y))
-                    icon_loaded = True
-        except Exception as e:
-            print(f"Ошибка при загрузке иконки CRI: {e}")
+                    icon = icon.resize((self.size, self.size), Image.Resampling.LANCZOS)
+                    draw._image.paste(icon, (int(x), int(y)), icon if icon.mode == 'RGBA' else None)
+                    return
+        except: pass
+        font = self.f_cri_angle
+        draw.text((x + 35, y + 28), "CRI", fill="black", font=font)
+        draw.text((x + 45, y + 68), "90", fill="black", font=font)
 
         # Fallback
         if not icon_loaded:
@@ -799,11 +766,11 @@ class LedImageGenerator:
 
             # 3. Отрисовка текста напряжения (V DC) внизу
             # v_text obsahuje строку, např. "24 V DC"
-            w_volt = draw.textbbox((0,0), v_text, font=self.f_mid)[2]
+            w_volt = draw.textbbox((0,0), v_text, font=self.f_sub)[2]
             start_volt_x = x + (self.size - w_volt) / 2
-            volt_y = y + 85 # Отступ для нижней части
+            volt_y = y + 88 # Отступ для нижней части
             
-            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_mid)
+            draw.text((start_volt_x, volt_y), v_text, fill="black", font=self.f_sub)
 
         elif field == "cut":
             led_val = str(full_data.get("led_segment", "")).strip()
