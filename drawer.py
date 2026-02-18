@@ -199,13 +199,13 @@ class LedImageGenerator:
         white_keywords = ["NW", "CW", "WW", "EWW", "UWW", "DW", "DUAL", "CCT"]
         yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
         
-        # suffix = "W"
+        suffix = ""
         if any(kw in color_val for kw in yellow_keywords):
             suffix = "Y"
         elif any(kw in color_val for kw in white_keywords):
             suffix = "W"
-        elif any(kw in color_val for kw in white_keywords + yellow_keywords):
-            suffix = "" # Default to W if we see any color hint but can't determine
+        # elif any(kw in color_val for kw in white_keywords + yellow_keywords):
+        #     suffix = "" # Default to W if we see any color hint but can't determine
 
 
         if model_code and volt_code:
