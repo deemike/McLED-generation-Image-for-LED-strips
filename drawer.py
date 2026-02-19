@@ -206,6 +206,52 @@ class LedImageGenerator:
             suffix = "W"
         # elif any(kw in color_val for kw in white_keywords + yellow_keywords):
         #     suffix = "" # Default to W if we see any color hint but can't determine
+                # --- ИСКЛЮЧЕНИЯ ДЛЯ КОНКРЕТНЫХ МОДЕЛЕЙ (ML-КОДОВ) ---
+        # Список кодов, для которых нужен футер 54D24R
+        special_sku_54d24r = [
+            "ML-126.050.90", "ML-126.046.90", "ML-126.047.90", 
+            "ML-126.045.90", "ML-126.048.90"
+        ]
+        
+        # Пытаемся получить ML-код из данных (если он там есть) или из model_full если туда попал мусор
+        # Или проверяем, не передали ли мы его специально
+        current_sku = str(data.get("ml_code", "")).upper() # Предполагаем, что вы добавите это в data
+        
+        # Если ml_code нет в data, попробуем найти его в model_full или других полях, если они содержат ML-...
+        # Но надежнее добавить data["ml_code"] = ... в gui.py
+        
+        force_footer = None
+        
+        # Проверяем, содержится ли текущий SKU в списке исключений (проверка по началу строки, чтобы игнорировать .X или .0)
+        # Если current_sku пустой, это условие не сработает
+        for s_sku in special_sku_54d24r:
+            # Сравниваем без учета последних цифр, если они меняются (или точное совпадение)
+            # В вашем примере коды с .X, значит ищем вхождение
+            if s_sku in current_sku or s_sku.replace(".", "-") in current_sku.replace(".", "-"):
+                force_footer = "54D24R"
+                break
+        
+        if force_footer:
+            footer_name_full = force_footer
+            # Сбросим model_code, чтобы войти в блок if ниже, или напишем свою логику загрузки
+            # Проще всего подменить логику поиска:
+            
+            footer_path = self._find_image_path(force_footer)
+            if footer_path:
+                 try:
+                    with Image.open(footer_path) as footer:
+                        if footer.width != 1000:
+                            ratio = 1000 / footer.width
+                            new_h = int(footer.height * ratio)
+                            footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
+                        final_canvas.paste(footer, (0, 1000 - footer.height))
+                        print(f"SUCCESS: Special footer added: {force_footer}")
+                        # Важно: если добавили спец. футер, выходим или пропускаем стандартный блок
+                        return final_canvas 
+                 except Exception as e:
+                    print(f"ERROR adding special footer: {e}")
+
+        # -----------------------------------------------------
 
 
         if model_code and volt_code:
@@ -227,6 +273,49 @@ class LedImageGenerator:
                         footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
                         
                         final_canvas.paste(footer, (0, 1000 - footer.height))
+                        #--- ВСТАВКА ТЕКСТА НА ФУТЕР ---
+                        draw_final = ImageDraw.Draw(final_canvas)
+                        
+                        # Получаем значения
+                        led_seg = str(data.get("led_segment", "")).strip()
+                        # Если led_segment пустой, пробуем найти в тексте (как в блоке "cut")
+                        if not led_seg or led_seg == "0":
+                            # Простая попытка извлечь число перед LED если оно есть в values
+                            # Или берем из 'cut' если там есть логика (но cut это мм)
+                            # В блоке cut логика такая:
+                            all_vals = " ".join(str(v) for v in data.values())
+                            m = re.search(r'(\d+)\s*LED', all_vals, re.IGNORECASE)
+                            led_seg = m.group(1) if m else "0"
+                        
+                        cut_val = str(data.get("cut", "")).strip()
+
+                        # Текст: "{led_seg} LED"
+                        text_led = f"{led_seg} LED"
+                        # Текст: "{cut_val} mm"
+                        text_cut = f"{cut_val} mm"
+
+                        # Настройки шрифта (используем существующие или по умолчанию)
+                        # Вы можете настроить размер (например 30) и позицию
+                        f_footer = self.f_val # Или загрузить свой: ImageFont.truetype(config.FONT_BOLD, 36)
+                        
+                        # Вычисляем позицию X для центрирования
+                        # Ширина картинки 1000. Центр 500.
+                        # Позиция Y: футер начинается на (1000 - footer.height). 
+                        # Текст хотим "примерно наверху по середине" ФУТЕРА.
+                        # Допустим отступ сверху футера +30px.
+                        
+                        footer_y_start = 1000 - footer.height
+                        text_y_start = footer_y_start + 40 # Настройте отступ сверху здесь
+
+                        # Рисуем Cut
+                        w_cut = draw_final.textbbox((0,0), text_cut, font=f_footer)[2]
+                        draw_final.text((500 - w_cut/2, text_y_start + 52), text_cut, fill="black", font=f_footer)
+
+                        # Рисуем LED (под Cut)
+                        w_led = draw_final.textbbox((0,0), text_led, font=f_footer)[2]
+                        draw_final.text((500 - w_led/2, text_y_start + 87), text_led, fill="black", font=f_footer)
+
+                        # -------------------------------
                         print(f"SUCCESS: Footer added: {os.path.basename(footer_path)}")
                 except Exception as e:
                     print(f"ERROR adding footer: {e}")

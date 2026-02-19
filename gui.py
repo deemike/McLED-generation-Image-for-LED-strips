@@ -179,6 +179,7 @@ class LedApp(ctk.CTk):
         try:
             img = self.generator.generate(data)
             sku = self.url_input.get().split('/')[-1].upper().replace('-', '.')
+            data["ml_code"] = sku
             filename = f"{sku}_30.webp"
             
             full_path = target_dir / filename
@@ -284,6 +285,7 @@ class LedApp(ctk.CTk):
                     try:
                         img = self.generator.generate(data)
                         clean_name = code.strip().replace('/', '-').replace('\\', '-')
+                        data["ml_code"] = code
                         filename = f"{clean_name}_30.webp"
                         
                         full_path = target_dir / filename
