@@ -242,11 +242,11 @@ class LedImageGenerator:
                         
                         t1 = f"{led_seg} LED"
                         w1 = draw_final.textbbox((0,0), t1, font=font)[2]
-                        draw_final.text((x_center - w1/2, y_base), t1, fill="black", font=font)
+                        draw_final.text((x_center - w1/2, y_base + 52), t1, fill="black", font=font)
                         
                         t2 = f"{cut_val} mm"
                         w2 = draw_final.textbbox((0,0), t2, font=font)[2]
-                        draw_final.text((x_center - w2/2, y_base + 35), t2, fill="black", font=font)
+                        draw_final.text((x_center - w2/2, y_base + 87), t2, fill="black", font=font)
                         
                         return final_canvas
                  except Exception as e:
