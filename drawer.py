@@ -200,43 +200,21 @@ class LedImageGenerator:
         yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
         
         suffix = ""
-        if any(kw in color_val for kw in yellow_keywords):
-            suffix = "Y"
-        elif any(kw in color_val for kw in white_keywords):
-            suffix = "W"
-        # elif any(kw in color_val for kw in white_keywords + yellow_keywords):
-        #     suffix = "" # Default to W if we see any color hint but can't determine
-                # --- ИСКЛЮЧЕНИЯ ДЛЯ КОНКРЕТНЫХ МОДЕЛЕЙ (ML-КОДОВ) ---
-        # Список кодов, для которых нужен футер 54D24R
-        special_sku_54d24r = [
-            "ML-126.050.90", "ML-126.046.90", "ML-126.047.90", 
-            "ML-126.045.90", "ML-126.048.90"
+                # --- ИСКЛЮЧЕНИЕ ДЛЯ 54D24R ---
+        # Получаем ML код (должен быть передан в data['ml_code'] из GUI)
+        current_ml = str(data.get("ml_code", "")).upper().replace("-", ".")
+        
+        # Список префиксов ML-кодов, для которых нужна картинка 54D24R
+        special_prefixes = [
+            "ML.126.050.90", "ML.126.046.90", "ML.126.047.90", 
+            "ML.126.045.90", "ML.126.048.90"
         ]
         
-        # Пытаемся получить ML-код из данных (если он там есть) или из model_full если туда попал мусор
-        # Или проверяем, не передали ли мы его специально
-        current_sku = str(data.get("ml_code", "")).upper() # Предполагаем, что вы добавите это в data
+        is_special = any(current_ml.startswith(prefix) for prefix in special_prefixes)
         
-        # Если ml_code нет в data, попробуем найти его в model_full или других полях, если они содержат ML-...
-        # Но надежнее добавить data["ml_code"] = ... в gui.py
-        
-        force_footer = None
-        
-        # Проверяем, содержится ли текущий SKU в списке исключений (проверка по началу строки, чтобы игнорировать .X или .0)
-        # Если current_sku пустой, это условие не сработает
-        for s_sku in special_sku_54d24r:
-            # Сравниваем без учета последних цифр, если они меняются (или точное совпадение)
-            # В вашем примере коды с .X, значит ищем вхождение
-            if s_sku in current_sku or s_sku.replace(".", "-") in current_sku.replace(".", "-"):
-                force_footer = "54D24R"
-                break
-        
-        if force_footer:
-            footer_name_full = force_footer
-            # Сбросим model_code, чтобы войти в блок if ниже, или напишем свою логику загрузки
-            # Проще всего подменить логику поиска:
-            
-            footer_path = self._find_image_path(force_footer)
+        if is_special:
+            footer_name_full = "54D24R"
+            footer_path = self._find_image_path(footer_name_full)
             if footer_path:
                  try:
                     with Image.open(footer_path) as footer:
@@ -244,15 +222,43 @@ class LedImageGenerator:
                             ratio = 1000 / footer.width
                             new_h = int(footer.height * ratio)
                             footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
+                        
                         final_canvas.paste(footer, (0, 1000 - footer.height))
-                        print(f"SUCCESS: Special footer added: {force_footer}")
-                        # Важно: если добавили спец. футер, выходим или пропускаем стандартный блок
-                        return final_canvas 
+                        print(f"SUCCESS: Special footer added: {footer_name_full}")
+                        
+                        # Добавляем текст (LED/Cut) как в стандартном блоке
+                        draw_final = ImageDraw.Draw(final_canvas)
+                        led_seg = str(data.get("led_segment", "")).strip()
+                        if not led_seg or led_seg == "0":
+                             m = re.search(r'(\d+)\s*LED', " ".join(str(v) for v in data.values()), re.IGNORECASE)
+                             led_seg = m.group(1) if m else "0"
+                        cut_val = str(data.get("cut", "")).strip()
+                        font = self.f_val 
+                        footer_y = 1000 - footer.height
+                        
+                        # Позиция текста
+                        x_center = 500
+                        y_base = footer_y + 40 
+                        
+                        t1 = f"{led_seg} LED"
+                        w1 = draw_final.textbbox((0,0), t1, font=font)[2]
+                        draw_final.text((x_center - w1/2, y_base), t1, fill="black", font=font)
+                        
+                        t2 = f"{cut_val} mm"
+                        w2 = draw_final.textbbox((0,0), t2, font=font)[2]
+                        draw_final.text((x_center - w2/2, y_base + 35), t2, fill="black", font=font)
+                        
+                        return final_canvas
                  except Exception as e:
-                    print(f"ERROR adding special footer: {e}")
+                    print(f"Error adding special footer: {e}")
+        # -----------------------------
 
-        # -----------------------------------------------------
-
+        if any(kw in color_val for kw in yellow_keywords):
+            suffix = "Y"
+        elif any(kw in color_val for kw in white_keywords):
+            suffix = "W"
+        # elif any(kw in color_val for kw in white_keywords + yellow_keywords):
+        #     suffix = "" # Default to W if we see any color hint but can't determine
 
         if model_code and volt_code:
             # 1. Пробуем найти полное имя: МОДЕЛЬ + ВОЛЬТ + СУФФИКС (напр. 10A24Y)

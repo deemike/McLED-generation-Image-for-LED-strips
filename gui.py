@@ -169,19 +169,18 @@ class LedApp(ctk.CTk):
 
     def run_generate(self):
         data = {k: v.get().strip() for k, v in self.entries.items()}
-        # Настройка путей
         downloads_path = Path.home() / "Downloads"
         target_dir = downloads_path / "McLED_LED-pasky"
-        
-        # Создаем папку, если ее нет
         target_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            img = self.generator.generate(data)
+            # FIX: Set ml_code BEFORE generate
             sku = self.url_input.get().split('/')[-1].upper().replace('-', '.')
-            data["ml_code"] = sku
-            filename = f"{sku}_30.webp"
+            data["ml_code"] = sku 
             
+            img = self.generator.generate(data)
+            
+            filename = f"{sku}_30.webp"
             full_path = target_dir / filename
             
             img.save(str(full_path), "JPEG", quality=95)
@@ -264,30 +263,32 @@ class LedApp(ctk.CTk):
                     url = self.transform_code_to_url(code)
                     print(f"Batch ({i+1}/{total}): {code} -> {url}")
                     
-                    # 2. Inteligentní pauza proti blokování (1.5 - 3.5 sekund stačí)
                     if i > 0:
                         delay = random.uniform(1.5, 3.5)
                         time.sleep(delay)
                     
-                    # 3. Stáhnout data
                     data = fetch_data(url, driver=driver)
                     
-                    # Настройка путей для батча
                     downloads_path = Path.home() / "Downloads"
                     target_dir = downloads_path / "McLED_LED-pasky"
                     target_dir.mkdir(parents=True, exist_ok=True)
 
                     if not data:
-                        # ... (код обработки отсутствия данных)
-                        continue
+                        # try once more
+                        time.sleep(4)
+                        data = fetch_data(url, driver=driver)
+                        if not data:
+                            errors.append(code)
+                            continue
 
                     # 4. Generovat a uložit
                     try:
+                        # FIX: Set ml_code BEFORE generate
+                        data["ml_code"] = code 
                         img = self.generator.generate(data)
-                        clean_name = code.strip().replace('/', '-').replace('\\', '-')
-                        data["ml_code"] = code
-                        filename = f"{clean_name}_30.webp"
                         
+                        clean_name = code.strip().replace('/', '-').replace('\\', '-')
+                        filename = f"{clean_name}_30.webp"
                         full_path = target_dir / filename
 
                         img.save(str(full_path), "JPEG", quality=95)
@@ -311,7 +312,6 @@ class LedApp(ctk.CTk):
                 except:
                     pass
             
-            # Finální zpráva
             final_msg = f"HOTOVO! Vygenerováno {success_count} z {total}."
             if errors:
                 final_msg += f" (Chyby: {len(errors)})"
