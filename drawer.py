@@ -200,13 +200,65 @@ class LedImageGenerator:
         yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
         
         suffix = ""
+                # --- ИСКЛЮЧЕНИЕ ДЛЯ 54D24R ---
+        # Получаем ML код (должен быть передан в data['ml_code'] из GUI)
+        current_ml = str(data.get("ml_code", "")).upper().replace("-", ".")
+        
+        # Список префиксов ML-кодов, для которых нужна картинка 54D24R
+        special_prefixes = [
+            "ML.126.050.90", "ML.126.046.90", "ML.126.047.90", 
+            "ML.126.045.90", "ML.126.048.90"
+        ]
+        
+        is_special = any(current_ml.startswith(prefix) for prefix in special_prefixes)
+        
+        if is_special:
+            footer_name_full = "54D24R"
+            footer_path = self._find_image_path(footer_name_full)
+            if footer_path:
+                 try:
+                    with Image.open(footer_path) as footer:
+                        if footer.width != 1000:
+                            ratio = 1000 / footer.width
+                            new_h = int(footer.height * ratio)
+                            footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
+                        
+                        final_canvas.paste(footer, (0, 1000 - footer.height))
+                        print(f"SUCCESS: Special footer added: {footer_name_full}")
+                        
+                        # Добавляем текст (LED/Cut) как в стандартном блоке
+                        draw_final = ImageDraw.Draw(final_canvas)
+                        led_seg = str(data.get("led_segment", "")).strip()
+                        if not led_seg or led_seg == "0":
+                             m = re.search(r'(\d+)\s*LED', " ".join(str(v) for v in data.values()), re.IGNORECASE)
+                             led_seg = m.group(1) if m else "0"
+                        cut_val = str(data.get("cut", "")).strip()
+                        font = self.f_val 
+                        footer_y = 1000 - footer.height
+                        
+                        # Позиция текста
+                        x_center = 500
+                        y_base = footer_y + 40 
+                        
+                        t1 = f"{led_seg} LED"
+                        w1 = draw_final.textbbox((0,0), t1, font=font)[2]
+                        draw_final.text((x_center - w1/2, y_base + 52), t1, fill="black", font=font)
+                        
+                        t2 = f"{cut_val} mm"
+                        w2 = draw_final.textbbox((0,0), t2, font=font)[2]
+                        draw_final.text((x_center - w2/2, y_base + 87), t2, fill="black", font=font)
+                        
+                        return final_canvas
+                 except Exception as e:
+                    print(f"Error adding special footer: {e}")
+        # -----------------------------
+
         if any(kw in color_val for kw in yellow_keywords):
             suffix = "Y"
         elif any(kw in color_val for kw in white_keywords):
             suffix = "W"
         # elif any(kw in color_val for kw in white_keywords + yellow_keywords):
         #     suffix = "" # Default to W if we see any color hint but can't determine
-
 
         if model_code and volt_code:
             # 1. Пробуем найти полное имя: МОДЕЛЬ + ВОЛЬТ + СУФФИКС (напр. 10A24Y)
@@ -227,6 +279,49 @@ class LedImageGenerator:
                         footer = footer.resize((1000, new_h), Image.Resampling.LANCZOS)
                         
                         final_canvas.paste(footer, (0, 1000 - footer.height))
+                        #--- ВСТАВКА ТЕКСТА НА ФУТЕР ---
+                        draw_final = ImageDraw.Draw(final_canvas)
+                        
+                        # Получаем значения
+                        led_seg = str(data.get("led_segment", "")).strip()
+                        # Если led_segment пустой, пробуем найти в тексте (как в блоке "cut")
+                        if not led_seg or led_seg == "0":
+                            # Простая попытка извлечь число перед LED если оно есть в values
+                            # Или берем из 'cut' если там есть логика (но cut это мм)
+                            # В блоке cut логика такая:
+                            all_vals = " ".join(str(v) for v in data.values())
+                            m = re.search(r'(\d+)\s*LED', all_vals, re.IGNORECASE)
+                            led_seg = m.group(1) if m else "0"
+                        
+                        cut_val = str(data.get("cut", "")).strip()
+
+                        # Текст: "{led_seg} LED"
+                        text_led = f"{led_seg} LED"
+                        # Текст: "{cut_val} mm"
+                        text_cut = f"{cut_val} mm"
+
+                        # Настройки шрифта (используем существующие или по умолчанию)
+                        # Вы можете настроить размер (например 30) и позицию
+                        f_footer = self.f_val # Или загрузить свой: ImageFont.truetype(config.FONT_BOLD, 36)
+                        
+                        # Вычисляем позицию X для центрирования
+                        # Ширина картинки 1000. Центр 500.
+                        # Позиция Y: футер начинается на (1000 - footer.height). 
+                        # Текст хотим "примерно наверху по середине" ФУТЕРА.
+                        # Допустим отступ сверху футера +30px.
+                        
+                        footer_y_start = 1000 - footer.height
+                        text_y_start = footer_y_start + 40 # Настройте отступ сверху здесь
+
+                        # Рисуем Cut
+                        w_cut = draw_final.textbbox((0,0), text_cut, font=f_footer)[2]
+                        draw_final.text((500 - w_cut/2, text_y_start + 52), text_cut, fill="black", font=f_footer)
+
+                        # Рисуем LED (под Cut)
+                        w_led = draw_final.textbbox((0,0), text_led, font=f_footer)[2]
+                        draw_final.text((500 - w_led/2, text_y_start + 87), text_led, fill="black", font=f_footer)
+
+                        # -------------------------------
                         print(f"SUCCESS: Footer added: {os.path.basename(footer_path)}")
                 except Exception as e:
                     print(f"ERROR adding footer: {e}")
