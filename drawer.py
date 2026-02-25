@@ -11,12 +11,12 @@ class LedImageGenerator:
         self.height = height
         self.size = 124
         self.gap = 15
-        self.radius = 12  # Единый радиус скругления
+        self.radius = 0  # Единый радиус скругления
         self.load_fonts()
 
     def load_fonts(self):
         try:
-            self.f_val = ImageFont.truetype(config.FONT_BOLD, 30)
+            self.f_val = ImageFont.truetype(config.FONT_BOLD, 35)
             self.f_rgb_small = ImageFont.truetype(config.FONT_BOLD, 36)
             self.f_rgb_big = ImageFont.truetype(config.FONT_BOLD, 48)
             self.f_dual_top = ImageFont.truetype(config.FONT_BOLD, 38)
@@ -24,7 +24,7 @@ class LedImageGenerator:
             self.f_mid = ImageFont.truetype(config.FONT_REGULAR, 26)
             self.f_sub = ImageFont.truetype(config.FONT_REGULAR, 16)
             self.f_cut_num = ImageFont.truetype(config.FONT_BOLD, 26)
-            self.f_cri_angle = ImageFont.truetype(config.FONT_BOLD, 26)
+            self.f_cri_angle = ImageFont.truetype(config.FONT_BOLD, 36)
         except:
             self.f_val = self.f_mid = self.f_sub = self.f_cut_num = \
             self.f_rgb_small = self.f_rgb_big = self.f_dual_top = \
@@ -162,7 +162,7 @@ class LedImageGenerator:
                 outline_color = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
                 outline_width = 1 if outline_color else 0
                 
-                draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill=bg_color, outline=outline_color, width=outline_width)
+                draw.rounded_rectangle([curr_x, curr_y, curr_x + self.size, curr_y + self.size], radius=self.radius, fill=bg_color, width=outline_width) # outline=outline_color,
                 self._draw_field_content(draw, field, val, curr_x, curr_y, txt_color, data, v_text_circuit)
 
         extra_fields = []
@@ -242,7 +242,7 @@ class LedImageGenerator:
                         
                         t1 = f"{led_seg} LED"
                         w1 = draw_final.textbbox((0,0), t1, font=font)[2]
-                        draw_final.text((x_center - w1/2, y_base + 52), t1, fill="black", font=font)
+                        draw_final.text((x_center - w1/2, y_base + 47), t1, fill="black", font=font)
                         
                         t2 = f"{cut_val} mm"
                         w2 = draw_final.textbbox((0,0), t2, font=font)[2]
@@ -315,7 +315,7 @@ class LedImageGenerator:
 
                         # Рисуем Cut
                         w_cut = draw_final.textbbox((0,0), text_cut, font=f_footer)[2]
-                        draw_final.text((500 - w_cut/2, text_y_start + 52), text_cut, fill="black", font=f_footer)
+                        draw_final.text((500 - w_cut/2, text_y_start + 47), text_cut, fill="black", font=f_footer)
 
                         # Рисуем LED (под Cut)
                         w_led = draw_final.textbbox((0,0), text_led, font=f_footer)[2]
@@ -332,7 +332,7 @@ class LedImageGenerator:
 
     def _draw_cri(self, draw, x, y):
         """Отрисовка CRI 90 с использованием иконки"""
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE") #, outline="#6E6E6E", width=1
         
         icon_loaded = False
         try:
@@ -357,7 +357,7 @@ class LedImageGenerator:
 
     def _draw_angle(self, draw, x, y, angle_val):
         """Отрисовка угла"""
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE") #, outline="#6E6E6E", width=1
         
         txt = f"{angle_val}°"
         font = self.f_cri_angle
@@ -370,7 +370,7 @@ class LedImageGenerator:
         t_draw = ImageDraw.Draw(temp_img)
         
         cx, cy = temp_size / 2, temp_size - 20 * upscale
-        line_len = 70 * upscale
+        line_len = 80 * upscale
         angle_spread_rad = math.radians(40) 
         line_w = 2 * upscale
         
@@ -383,7 +383,7 @@ class LedImageGenerator:
         t_draw.line([cx, cy, rx, ry], fill="black", width=line_w)
         
         arc_r = 45 * upscale
-        t_draw.arc([cx-arc_r, cy-arc_r, cx+arc_r, cy+arc_r], start=235, end=305, fill="black", width=line_w)
+        t_draw.arc([cx-arc_r, cy-arc_r, cx+arc_r, cy+arc_r], start=215, end=325, fill="black", width=line_w)
         
         temp_img = temp_img.resize((self.size, self.size), Image.Resampling.LANCZOS)
         canvas_ref = draw._image
@@ -441,7 +441,7 @@ class LedImageGenerator:
 
     def _draw_al_profile(self, draw, x, y):
         """Отрисовка иконки AL-Profil"""
-        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE", outline="#6E6E6E", width=1)
+        draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill="#EEEEEE") #, outline="#6E6E6E", width=1
         
         txt = "AL-Profil"
         font = self.f_val
@@ -538,7 +538,7 @@ class LedImageGenerator:
         td = ImageDraw.Draw(timg)
         
         cx = tsize // 2
-        base_y = 45 * upscale
+        base_y = 55 * upscale
         w = 60 * upscale
         
         if p_type == "ip20" or p_type == "ip54" or p_type == "ip67_digital":
@@ -596,21 +596,21 @@ class LedImageGenerator:
         w_rect = int(29 * upscale)
         
         if p_type in ["ip20", "ip54", "ip67_digital"]:
-            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", fill="#989898", width=line_w)
-            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y-1*upscale], outline="black", width=line_w)
+            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", width=line_w)
+            td.rectangle([cx-10*upscale, base_y-8*upscale, cx+10*upscale, base_y-1*upscale], outline="black", fill="#FFF9C7", width=line_w)
         elif p_type == "ip20_cob":
-            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", fill="#989898", width=line_w)
-            td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+6*upscale], 180, 360, outline="black", width=line_w)
+            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+3*upscale], outline="black", width=line_w)
+            td.chord([cx-13*upscale, base_y-8*upscale, cx+13*upscale, base_y+6*upscale], 180, 360, outline="black", fill="#FFF9C7", width=line_w)
         elif p_type in ["ip67", "ip54_vlhke"]:
             td.chord([cx-35*upscale, base_y-22*upscale, cx+35*upscale, base_y+28*upscale], 178, 362, outline="black", width=line_w)
             td.chord([cx-31*upscale, base_y-18*upscale, cx+31*upscale, base_y+20*upscale], 178, 362, outline="black", width=line_w)
-            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+1*upscale], outline="black", fill="#989898", width=line_w)
-            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-1*upscale], outline="black", width=line_w)
+            td.rectangle([cx-w_rect, base_y-2*upscale, cx+w_rect, base_y+1*upscale], outline="black", width=line_w)
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-1*upscale], outline="black", fill="#FFF9C7", width=line_w)
         elif p_type == "ip68":
             td.rectangle([cx-w_rect-39, base_y-18*upscale, cx+w_rect+39, base_y+3*upscale], outline="black", width=line_w)
             td.rectangle([cx-w_rect, base_y-15*upscale, cx+w_rect, base_y], outline="black", width=line_w)
-            td.rectangle([cx-w_rect+14, base_y-3*upscale, cx+w_rect-14, base_y], outline="black", fill="#989898", width=line_w)
-            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-2*upscale], outline="black", width=line_w)
+            td.rectangle([cx-w_rect+14, base_y-3*upscale, cx+w_rect-14, base_y], outline="black", width=line_w)
+            td.rectangle([cx-10*upscale, base_y-10*upscale, cx+10*upscale, base_y-2*upscale], outline="black", fill="#FFF9C7", width=line_w)
 
         draw_line_w = max(1, s // 2)
         width_y = base_y + 45 * s
@@ -645,7 +645,7 @@ class LedImageGenerator:
         w_txt = f"{w_val} mm"
         w_bbox = draw.textbbox((0, 0), w_txt, font=self.f_val)
         w_width = w_bbox[2] - w_bbox[0]
-        draw.text((paste_x + (area_w - 40)//2 - w_width//2, paste_y + area_h - 50), w_txt, fill="black", font=self.f_val)
+        draw.text((paste_x + (area_w - 40)//2 - w_width//2, paste_y + area_h - 55), w_txt, fill="black", font=self.f_val)
         
         h_txt = str(h_val).replace('.', ',')
         h_bbox = draw.textbbox((0, 0), h_txt, font=self.f_val)
@@ -706,8 +706,8 @@ class LedImageGenerator:
         main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, outline="#CCCCCC", width=1)
 
     def _draw_life(self, canvas, main_draw, x, y, val, bg_color, data):
-        draw_outline = "#6E6E6E" if bg_color.upper() == "#EEEEEE" else None
-        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color, outline=draw_outline, width=1)
+        draw_outline = "#6E6E6E" if bg_color.upper() != "#EEEEEE" else None
+        main_draw.rounded_rectangle([x, y, x + self.size, y + self.size], radius=self.radius, fill=bg_color) #, outline=draw_outline, width=1)
         
         oversample = 4
         temp_size = self.size * oversample
@@ -798,8 +798,8 @@ class LedImageGenerator:
                     draw.text((x + 27, y + 60), n_part, fill=txt_color, font=self.f_val)
         elif field == "voltage":
             num_v = re.sub(r'\D', '', val) 
-            draw.text((x + 35, y + 20), f"{num_v}V", fill=txt_color, font=self.f_val)
-            draw.text((x + 40, y + 65), "DC", fill=txt_color, font=self.f_val)
+            draw.text((x + 33, y + 20), f"{num_v}V", fill=txt_color, font=self.f_rgb_small)
+            draw.text((x + 38, y + 65), "DC", fill=txt_color, font=self.f_rgb_small)
         elif field == "ip":
             icon_loaded = False
             try:
@@ -858,7 +858,7 @@ class LedImageGenerator:
             # Символ "≤"
             draw.text((start_text_x, text_y + 4), "≤", fill="black", font=self.f_mid)
             # Значение
-            draw.text((start_text_x + w_le, text_y), val, fill="black", font=self.f_val)
+            draw.text((start_text_x + w_le + 3, text_y), val, fill="black", font=self.f_val)
             # Символ "m"
             draw.text((start_text_x + w_le + w_val, text_y + 4), " m", fill="black", font=self.f_mid)
 
@@ -914,19 +914,19 @@ class LedImageGenerator:
             elif ip_val == "20":
                 icon_to_draw = "ip20_cob" if "COB" in chip_val else "ip20"
             self._draw_width_profile(draw, x, y, icon_to_draw)
-            line_y = y + 15
+            line_y = y + 20
             draw.line([x + 26, line_y - 7, x + 26, line_y + 7], fill="black", width=1)
             draw.line([x + self.size - 26, line_y - 7, x + self.size - 26, line_y + 7], fill="black", width=1)
-            arrow_y = 15
+            arrow_y = 20
             draw.line([x + 26, y + arrow_y, x + self.size - 26, y + arrow_y], fill="black", width=1)
             draw.line([x + 26, y + arrow_y, x + 32, y + arrow_y - 3], fill="black", width=1)
             draw.line([x + 26, y + arrow_y, x + 32, y + arrow_y + 3], fill="black", width=1)
             draw.line([x + self.size - 26, y + arrow_y, x + self.size - 32, y + arrow_y - 3], fill="black", width=1)
             draw.line([x + self.size - 26, y + arrow_y, x + self.size - 32, y + arrow_y + 3], fill="black", width=1)
             w_v = draw.textbbox((0,0), val, font=self.f_val)[2]
-            draw.text((x + (self.size - w_v) / 2, y + 50), val, fill="black", font=self.f_val)
-            w_m = draw.textbbox((0,0), "mm", font=self.f_mid)[2]
-            draw.text((x + (self.size - w_m) / 2, y + 78), "mm", fill="black", font=self.f_mid)
+            draw.text((x + (self.size - w_v) / 2, y + 58), val, fill="black", font=self.f_val)
+            w_m = draw.textbbox((0,0), " mm", font=self.f_mid)[2]
+            draw.text((x + (self.size - w_m) / 2, y + 86), " mm", fill="black", font=self.f_mid)
         else:
             sub = config.SUB_TEXTS.get(field, "")
             w_v = draw.textbbox((0,0), val, font=self.f_val)[2]
