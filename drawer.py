@@ -196,8 +196,8 @@ class LedImageGenerator:
         
         color_val = str(data.get("color", "")).upper()
         
-        white_keywords = ["NW", "CW", "WW", "EWW", "UWW", "DW", "DUAL", "CCT"]
-        yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "RGB"]
+        white_keywords = ["NW", "CW", "WW", "EWW", "UWW", "DUAL", "CCT"]
+        yellow_keywords = ["Y", "G", "B", "R", "A", "O", "P", "S", "M", "MR", "SPI", "DW", "RGB"]
         
         suffix = ""
                 # --- ИСКЛЮЧЕНИЕ ДЛЯ 54D24R ---
@@ -257,8 +257,8 @@ class LedImageGenerator:
             suffix = "Y"
         elif any(kw in color_val for kw in white_keywords):
             suffix = "W"
-        # elif any(kw in color_val for kw in white_keywords + yellow_keywords):
-        #     suffix = "" # Default to W if we see any color hint but can't determine
+        elif any(kw in color_val for kw in white_keywords + yellow_keywords):
+            suffix = ""
 
         if model_code and volt_code:
             # 1. Пробуем найти полное имя: МОДЕЛЬ + ВОЛЬТ + СУФФИКС (напр. 10A24Y)
